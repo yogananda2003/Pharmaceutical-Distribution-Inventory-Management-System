@@ -1,0 +1,62 @@
+[project]
+name = "pharma-distribution-backend"
+version = "0.1.0"
+description = "Pharmaceutical Distribution & Inventory Management System — backend"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "asyncpg>=0.30",
+    "psycopg[binary]>=3.2",
+    "pydantic[email]>=2.9",
+    "pydantic-settings>=2.6",
+    "email-validator>=2.0",
+    "python-jose[cryptography]>=3.3",
+    "passlib[bcrypt]>=1.7",
+    "bcrypt>=4.2",
+    "python-multipart>=0.0.12",
+    "structlog>=24.4",
+    "celery>=5.4",
+    "redis>=5.2",
+    "slowapi>=0.1.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.24",
+    "pytest-cov>=6.0",
+    "httpx>=0.27",
+    "ruff>=0.7",
+    "mypy>=1.13",
+    "factory-boy>=3.3",
+    "freezegun>=1.5",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["B008"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+ignore_missing_imports = true

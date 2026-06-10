@@ -1,0 +1,32 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "FastAPI: uvicorn (backend)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--reload", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env",
+      "justMyCode": true
+    },
+    {
+      "name": "Pytest: backend (current file)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/backend/.env.test",
+      "justMyCode": true
+    },
+    {
+      "name": "Frontend: Vite dev server",
+      "type": "node-terminal",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}/frontend"
+    }
+  ]
+}

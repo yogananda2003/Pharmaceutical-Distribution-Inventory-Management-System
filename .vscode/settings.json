@@ -1,0 +1,32 @@
+{
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/Scripts/python.exe",
+  "python.testing.pytestEnabled": true,
+  "python.testing.unittestEnabled": false,
+  "python.testing.pytestArgs": ["backend/tests"],
+  "python.analysis.extraPaths": ["${workspaceFolder}/backend"],
+
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  },
+  "ruff.configurationPreference": "filesystemFirst",
+
+  "[typescript][typescriptreact][javascript][javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+
+  "files.exclude": {
+    "**/__pycache__": true,
+    "**/.pytest_cache": true,
+    "**/.mypy_cache": true,
+    "**/.ruff_cache": true
+  }
+}
