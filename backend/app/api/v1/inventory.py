@@ -8,6 +8,7 @@ from app.core.db import AsyncSession, get_db
 from app.core.deps import CurrentUser, require_roles
 from app.core.responses import success_envelope
 from app.models.user import UserRole
+from app.schemas.fefo import FEFOAllocationRequest, FEFOReleaseRequest
 from app.schemas.inventory_batch import (
     AdjustRequest,
     AllocateRequest,
@@ -19,6 +20,7 @@ from app.schemas.inventory_batch import (
     StockOutRequest,
 )
 from app.schemas.inventory_transaction import TransactionRead
+from app.services.fefo import FEFOService
 from app.services.inventory_batch import InventoryBatchService
 
 router = APIRouter(prefix="/inventory", tags=["inventory"])
@@ -39,6 +41,10 @@ _WAREHOUSE_OPS_ROLES = (
 
 def _svc(session: AsyncSession = Depends(get_db)) -> InventoryBatchService:
     return InventoryBatchService(session)
+
+
+def _fefo_svc(session: AsyncSession = Depends(get_db)) -> FEFOService:
+    return FEFOService(session)
 
 
 # ── batch CRUD ────────────────────────────────────────────────────────────────
@@ -257,3 +263,44 @@ async def list_all_transactions(
 ) -> dict[str, object]:
     txns = await svc.list_all_transactions(limit=limit, offset=offset)
     return success_envelope([TransactionRead.model_validate(t).model_dump() for t in txns])
+
+
+# ── FEFO endpoints ────────────────────────────────────────────────────────────
+
+
+@router.post(
+    "/fefo/allocate",
+    response_model=None,
+    dependencies=[Depends(require_roles(*_WRITE_ROLES))],
+)
+async def fefo_allocate(
+    body: FEFOAllocationRequest,
+    current_user: CurrentUser,
+    svc: FEFOService = Depends(_fefo_svc),
+) -> dict[str, object]:
+    try:
+        result = await svc.allocate(body, created_by=current_user.id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc
+    return success_envelope(result.model_dump())
+
+
+@router.post(
+    "/fefo/release",
+    response_model=None,
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(*_WRITE_ROLES))],
+)
+async def fefo_release(
+    body: FEFOReleaseRequest,
+    current_user: CurrentUser,
+    svc: FEFOService = Depends(_fefo_svc),
+) -> None:
+    try:
+        await svc.release_allocation(body, created_by=current_user.id)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
+        ) from exc

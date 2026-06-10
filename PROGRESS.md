@@ -24,6 +24,22 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 7 — FEFO Allocation Engine
+- Date: 2026-06-10
+- Built:
+  - `app/repositories/inventory_batch.py` — added `list_allocatable_fefo` (active, not-expired, qty>0, ordered by expiry_date ASC, optional warehouse filter; no lock — callers lock per-row)
+  - `app/schemas/fefo.py` — FEFOAllocationRequest, BatchAllocationDetail, FEFOAllocationResponse, FEFOReleaseItem, FEFOReleaseRequest
+  - `app/services/fefo.py` — FEFOService: allocate (3-step: optimistic pre-check → per-batch FOR UPDATE + re-validate → all-or-nothing commit), release_allocation
+  - `app/api/v1/inventory.py` — POST /inventory/fefo/allocate, POST /inventory/fefo/release (204)
+- Test gate:
+  - Lint/format/type: all green (55 source files)
+  - FEFO tests: 19/19 — single batch, earliest expiry first, 2-batch spill, 3-batch spill, expired batches skipped, all-expired → 400, insufficient stock → 400 + no stock reserved, no batches → 400, quantity correctness (available↓ reserved↑), one ALLOCATION txn per batch, warehouse filter, warehouse filter insufficient, release restores quantities, release creates RELEASE txns, release-over-reserved → 400, concurrent allocation (only one wins), role checks (sales 403, unauth 401, qty=0 422)
+  - Full suite: 167/167 passing
+- Notes:
+  - FEFO is all-or-nothing: if pre-check passes but concurrent writes reduce stock below requested, ValueError raised before commit → session auto-rollbacks partial allocations
+  - `list_allocatable_fefo` does NOT lock; locking happens per-row in the allocation loop via `get_by_id_for_update`; state re-validated after each lock
+  - `FEFOReleaseRequest` accepts a list of `{batch_id, quantity}` — the caller (future order system, Stage 10) tracks which batches were allocated
+
 ## Stage 6 — Inventory: Batches & Transactions
 - Date: 2026-06-10
 - Built:

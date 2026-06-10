@@ -108,6 +108,33 @@ class InventoryBatchRepository:
         )
         return result.scalars().all()
 
+    async def list_allocatable_fefo(
+        self,
+        medicine_id: UUID,
+        today: date,
+        *,
+        warehouse_id: UUID | None = None,
+    ) -> Sequence[InventoryBatch]:
+        """FEFO candidates: active, not expired, has available stock, ordered earliest-expiry first.
+
+        Does NOT lock rows — callers must use get_by_id_for_update before mutating.
+        """
+        stmt = (
+            select(InventoryBatch)
+            .where(
+                InventoryBatch.medicine_id == medicine_id,
+                InventoryBatch.expiry_date >= today,
+                InventoryBatch.quantity_available > 0,
+                InventoryBatch.status == BatchStatus.ACTIVE,
+                InventoryBatch.deleted_at.is_(None),
+            )
+            .order_by(InventoryBatch.expiry_date)
+        )
+        if warehouse_id is not None:
+            stmt = stmt.where(InventoryBatch.warehouse_id == warehouse_id)
+        result = await self.session.execute(stmt)
+        return result.scalars().all()
+
     async def add(self, batch: InventoryBatch) -> InventoryBatch:
         self.session.add(batch)
         await self.session.flush()
