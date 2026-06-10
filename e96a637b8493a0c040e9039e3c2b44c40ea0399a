@@ -1,0 +1,56 @@
+backend/app/repositories/supplier.py
+  7cbf4bb1a8ef6895 1-34
+backend/app/schemas/supplier.py
+  7cbf4bb1a8ef6895 1-61
+backend/app/api/v1/suppliers.py
+  7cbf4bb1a8ef6895 1-107
+backend/app/api/v1/warehouses.py
+  7cbf4bb1a8ef6895 1-111
+backend/app/models/supplier.py
+  7cbf4bb1a8ef6895 1-36
+backend/app/services/supplier.py
+  7cbf4bb1a8ef6895 1-80
+backend/app/schemas/warehouse.py
+  7cbf4bb1a8ef6895 1-47
+backend/app/repositories/warehouse.py
+  7cbf4bb1a8ef6895 1-44
+backend/app/models/warehouse.py
+  7cbf4bb1a8ef6895 1-16
+backend/tests/api/test_warehouses.py
+  7cbf4bb1a8ef6895 1-296
+PROGRESS.md
+  7cbf4bb1a8ef6895 27-46
+backend/alembic/versions/243cb5a43ba6_supplier_warehouse_tables.py
+  7cbf4bb1a8ef6895 71
+backend/tests/api/test_suppliers.py
+  7cbf4bb1a8ef6895 1-248
+backend/app/services/warehouse.py
+  7cbf4bb1a8ef6895 1-71
+backend/app/api/v1/router.py
+  7cbf4bb1a8ef6895 3,10-11
+backend/app/models/__init__.py
+  7cbf4bb1a8ef6895 3,5
+backend/pyproject.toml
+  7cbf4bb1a8ef6895 53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "e96a637b8493a0c040e9039e3c2b44c40ea0399a",
+  "prompts": {
+    "7cbf4bb1a8ef6895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9195f6e1-b8d3-4a8f-821f-9bfac3b6108a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Yogananda.b",
+      "messages": [],
+      "total_additions": 1181,
+      "total_deletions": 4,
+      "accepted_lines": 1178,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/1bf5b38271de6c8968ec088bd9ab77feae7d403e8d79f0a84d14b748be0e55b6"
+    }
+  }
+}
