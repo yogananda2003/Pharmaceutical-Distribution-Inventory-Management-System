@@ -1,0 +1,34 @@
+backend/app/schemas/fefo.py
+  7cbf4bb1a8ef6895 1-60
+backend/tests/api/test_fefo.py
+  7cbf4bb1a8ef6895 1-607
+backend/app/services/fefo.py
+  7cbf4bb1a8ef6895 1-17,19-151
+backend/app/api/v1/inventory.py
+  7cbf4bb1a8ef6895 23,46-49,266-306
+PROGRESS.md
+  7cbf4bb1a8ef6895 27-42
+backend/app/repositories/inventory_batch.py
+  7cbf4bb1a8ef6895 111-137
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "a2b460f8bcb23e7f56a7e89de531edc7eb5ef623",
+  "prompts": {
+    "7cbf4bb1a8ef6895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9195f6e1-b8d3-4a8f-821f-9bfac3b6108a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Yogananda.b",
+      "messages": [],
+      "total_additions": 908,
+      "total_deletions": 0,
+      "accepted_lines": 906,
+      "overriden_lines": 2,
+      "messages_url": "https://usegitai.com/cas/fbe56062738517cc7be843ddc57adfe3cdbfb968531c4ae8a621910c93fe0310"
+    }
+  }
+}
