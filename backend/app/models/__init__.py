@@ -1,3 +1,4 @@
+from app.models.customer import Customer as Customer
 from app.models.inventory_batch import InventoryBatch as InventoryBatch
 from app.models.inventory_transaction import InventoryTransaction as InventoryTransaction
 from app.models.medicine import Medicine as Medicine

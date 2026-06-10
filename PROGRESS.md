@@ -24,6 +24,26 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 9 — Customer Management
+- Date: 2026-06-10
+- Built:
+  - `app/models/customer.py` — Customer (TenantedEntity), CustomerStatus StrEnum (active/inactive/blacklisted), credit_limit Numeric(12,2)
+  - `app/schemas/customer.py` — CustomerCreate (code uppercased, blank name rejected, credit_limit >= 0), CustomerUpdate (all fields optional, same validations), CustomerRead (from_attributes)
+  - `app/repositories/customer.py` — get_by_id_not_deleted, get_by_code, list_active, list_all_not_deleted
+  - `app/services/customer.py` — create (unique code check), get, list_customers (active_only filter), update (refresh after commit), delete (soft)
+  - `app/api/v1/customers.py` — POST/GET/PUT/DELETE /customers; ADMIN+INVENTORY_MANAGER+SALES_REPRESENTATIVE write; all four roles read
+  - `app/api/v1/router.py` — registered customers router
+  - `alembic/versions/b2c3d4e5f6a1_customer_table.py` — creates customers table; downgrade drops customer_status type
+- Test gate:
+  - Lint/format/type: all green (66 source files)
+  - Customer tests: 26/26 — create (inv_manager, sales_rep, code uppercased, all fields, dup 409, blank name 422, negative credit 422, zero credit allowed, blacklisted on create), list (all + active_only filter excludes inactive), get/404, update (credit_limit, status to blacklisted, negative credit 422, 404), soft delete then 404, delete excluded from list, role checks (wh_staff 403 on create/update, 200 on read; sales_rep can delete), unauth 401 (create + list)
+  - Migration round-trip: downgrade -1 → upgrade head ✅
+  - Full suite: 216/216 passing
+- Notes:
+  - Sales representatives can write customers (they manage customer relationships) — distinct from suppliers/warehouses which are ADMIN+INVENTORY_MANAGER only
+  - `refresh` after `commit` required in update service method to avoid MissingGreenlet on `updated_at` timestamp (same pattern as purchase_order service)
+  - `select` import not needed in `test_customers.py` — removed by ruff; `get_session_local` import kept (used in `_set_role`)
+
 ## Stage 8 — Purchase Management
 - Date: 2026-06-10
 - Built:
