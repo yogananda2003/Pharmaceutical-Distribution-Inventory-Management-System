@@ -24,6 +24,24 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 4 — Medicine Management
+- Date: 2026-06-10
+- Built:
+  - `app/models/medicine.py` — Medicine (TenantedEntity, DosageForm StrEnum 10 values, MedicineStatus StrEnum, code unique+indexed)
+  - `app/schemas/medicine.py` — MedicineCreate (code uppercased, blank-string validation), MedicineUpdate (all fields optional), MedicineRead
+  - `app/repositories/medicine.py` — get_by_id_not_deleted (soft-delete aware), get_by_code, search (ilike on name/generic_name/code), list_active
+  - `app/services/medicine.py` — create (unique code check), get/update/delete (all soft-delete aware), list_medicines, list_active, search
+  - `app/api/v1/medicines.py` — POST/GET/PUT/DELETE /medicines; GET /medicines/search; active_only query param; ADMIN+INVENTORY_MANAGER write, all roles read
+  - `alembic/versions/ddd492b27acf_medicine_table.py` — creates medicines table with lowercase enum values; downgrade drops dosage_form and medicine_status types
+- Test gate:
+  - Lint/format/type: all green (35 files)
+  - API tests: 18/18 — create (inv_manager, admin, dup code rejected, code uppercased, bad dosage_form rejected, blank name rejected, customer/sales blocked), list (all roles), get by id, 404, search, active_only filter, update, update 404, soft delete (then 404), warehouse staff read-OK/write-403
+  - Migration round-trip: downgrade -1 → upgrade head ✅
+  - Full suite: 72/72 passing
+- Notes:
+  - `values_callable=lambda x: [e.value for e in x]` is required on all `Enum(StrEnum, ...)` columns — without it SQLAlchemy autogenerate uses member NAMES (uppercase) for the PostgreSQL CREATE TYPE, but the ORM stores lowercase VALUES, causing insert failures in the dev DB (tests use create_all which is always lowercase)
+  - `BaseRepository.get_by_id` uses `session.get()` which ignores deleted_at — always use `get_by_id_not_deleted` for domain queries that should respect soft delete
+
 ## Stage 3 — User Management & RBAC
 - Date: 2026-06-10
 - Built:
