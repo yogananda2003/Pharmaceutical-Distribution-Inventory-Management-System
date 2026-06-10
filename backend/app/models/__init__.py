@@ -1,6 +1,8 @@
 from app.models.inventory_batch import InventoryBatch as InventoryBatch
 from app.models.inventory_transaction import InventoryTransaction as InventoryTransaction
 from app.models.medicine import Medicine as Medicine
+from app.models.purchase_order import PurchaseOrder as PurchaseOrder
+from app.models.purchase_order import PurchaseOrderItem as PurchaseOrderItem
 from app.models.refresh_token import RefreshToken as RefreshToken
 from app.models.supplier import Supplier as Supplier
 from app.models.user import User as User

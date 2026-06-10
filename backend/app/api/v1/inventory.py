@@ -144,9 +144,7 @@ async def adjust(
     try:
         batch = await svc.adjust(batch_id, body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(BatchRead.model_validate(batch).model_dump())
 
 
@@ -164,9 +162,7 @@ async def damage(
     try:
         batch = await svc.damage(batch_id, body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(BatchRead.model_validate(batch).model_dump())
 
 
@@ -184,9 +180,7 @@ async def allocate(
     try:
         batch = await svc.allocate(batch_id, body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(BatchRead.model_validate(batch).model_dump())
 
 
@@ -204,9 +198,7 @@ async def release(
     try:
         batch = await svc.release(batch_id, body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(BatchRead.model_validate(batch).model_dump())
 
 
@@ -224,9 +216,7 @@ async def stock_out(
     try:
         batch = await svc.stock_out(batch_id, body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(BatchRead.model_validate(batch).model_dump())
 
 
@@ -281,9 +271,7 @@ async def fefo_allocate(
     try:
         result = await svc.allocate(body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return success_envelope(result.model_dump())
 
 
@@ -301,6 +289,4 @@ async def fefo_release(
     try:
         await svc.release_allocation(body, created_by=current_user.id)
     except ValueError as exc:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc

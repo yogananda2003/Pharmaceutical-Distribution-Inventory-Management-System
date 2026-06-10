@@ -48,9 +48,7 @@ class InventoryBatchRepository:
         )
         return result.scalar_one_or_none()
 
-    async def list_active(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[InventoryBatch]:
+    async def list_active(self, *, limit: int = 100, offset: int = 0) -> Sequence[InventoryBatch]:
         result = await self.session.execute(
             select(InventoryBatch)
             .where(
@@ -86,9 +84,7 @@ class InventoryBatchRepository:
             select(InventoryBatch)
             .where(
                 InventoryBatch.expiry_date < cutoff,
-                InventoryBatch.status.not_in(
-                    [BatchStatus.EXHAUSTED]
-                ),
+                InventoryBatch.status.not_in([BatchStatus.EXHAUSTED]),
                 InventoryBatch.deleted_at.is_(None),
             )
             .order_by(InventoryBatch.expiry_date)
@@ -96,9 +92,7 @@ class InventoryBatchRepository:
         )
         return result.scalars().all()
 
-    async def list_all(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[InventoryBatch]:
+    async def list_all(self, *, limit: int = 100, offset: int = 0) -> Sequence[InventoryBatch]:
         result = await self.session.execute(
             select(InventoryBatch)
             .where(InventoryBatch.deleted_at.is_(None))

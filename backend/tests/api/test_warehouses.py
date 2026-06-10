@@ -1,4 +1,5 @@
 """Stage 5 — Warehouse Management tests."""
+
 from __future__ import annotations
 
 import uuid
@@ -24,9 +25,7 @@ _WAREHOUSE_PAYLOAD = {
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -55,9 +54,7 @@ def _auth(token: str) -> dict[str, str]:
 
 
 async def test_inventory_manager_can_create_warehouse(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_create@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_create@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.post("/api/v1/warehouses", json=_WAREHOUSE_PAYLOAD, headers=_auth(token))
     assert resp.status_code == 201
     data = resp.json()["data"]
@@ -74,9 +71,7 @@ async def test_admin_can_create_warehouse(client: AsyncClient):
 
 
 async def test_warehouse_code_is_uppercased(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_upper@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_upper@example.com", UserRole.INVENTORY_MANAGER)
     payload = {**_WAREHOUSE_PAYLOAD, "warehouse_code": "wh-lower"}
     resp = await client.post("/api/v1/warehouses", json=payload, headers=_auth(token))
     assert resp.status_code == 201
@@ -84,9 +79,7 @@ async def test_warehouse_code_is_uppercased(client: AsyncClient):
 
 
 async def test_duplicate_warehouse_code_rejected(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_dup@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_dup@example.com", UserRole.INVENTORY_MANAGER)
     await client.post("/api/v1/warehouses", json=_WAREHOUSE_PAYLOAD, headers=_auth(token))
     resp = await client.post("/api/v1/warehouses", json=_WAREHOUSE_PAYLOAD, headers=_auth(token))
     assert resp.status_code == 409
@@ -130,25 +123,19 @@ async def test_sales_rep_can_list_warehouses(client: AsyncClient):
 
 
 async def test_warehouse_staff_can_list_warehouses(client: AsyncClient):
-    token = await _token_for_role(
-        client, "wh_staff_wh_list@example.com", UserRole.WAREHOUSE_STAFF
-    )
+    token = await _token_for_role(client, "wh_staff_wh_list@example.com", UserRole.WAREHOUSE_STAFF)
     resp = await client.get("/api/v1/warehouses", headers=_auth(token))
     assert resp.status_code == 200
 
 
 async def test_customer_cannot_list_warehouses(client: AsyncClient):
-    token = await _token_for_role(
-        client, "cust_wh_list@example.com", UserRole.CUSTOMER
-    )
+    token = await _token_for_role(client, "cust_wh_list@example.com", UserRole.CUSTOMER)
     resp = await client.get("/api/v1/warehouses", headers=_auth(token))
     assert resp.status_code == 403
 
 
 async def test_get_warehouse_by_id(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_get@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_get@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/warehouses",
         json={**_WAREHOUSE_PAYLOAD, "warehouse_code": "GET-WH"},
@@ -167,9 +154,7 @@ async def test_get_warehouse_404(client: AsyncClient):
 
 
 async def test_list_active_only_warehouses(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_active@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_active@example.com", UserRole.INVENTORY_MANAGER)
     await client.post(
         "/api/v1/warehouses",
         json={**_WAREHOUSE_PAYLOAD, "warehouse_code": "ACTIVE-WH", "is_active": True},
@@ -190,9 +175,7 @@ async def test_list_active_only_warehouses(client: AsyncClient):
 
 
 async def test_update_warehouse(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_update@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_update@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/warehouses",
         json={**_WAREHOUSE_PAYLOAD, "warehouse_code": "UPD-WH"},
@@ -211,9 +194,7 @@ async def test_update_warehouse(client: AsyncClient):
 
 
 async def test_update_nonexistent_warehouse(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_upd404@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_upd404@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.put(
         f"/api/v1/warehouses/{uuid.uuid4()}",
         json={"is_active": False},
@@ -247,9 +228,7 @@ async def test_sales_rep_cannot_update_warehouse(client: AsyncClient):
 
 
 async def test_soft_delete_warehouse(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_del@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_del@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/warehouses",
         json={**_WAREHOUSE_PAYLOAD, "warehouse_code": "DEL-WH"},
@@ -264,9 +243,7 @@ async def test_soft_delete_warehouse(client: AsyncClient):
 
 
 async def test_delete_nonexistent_warehouse(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_wh_del404@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_wh_del404@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.delete(f"/api/v1/warehouses/{uuid.uuid4()}", headers=_auth(token))
     assert resp.status_code == 404
 
@@ -282,9 +259,7 @@ async def test_warehouse_staff_can_read_but_not_write(client: AsyncClient):
     )
     wid = create_resp.json()["data"]["id"]
 
-    wh_token = await _token_for_role(
-        client, "wh_staff_rw@example.com", UserRole.WAREHOUSE_STAFF
-    )
+    wh_token = await _token_for_role(client, "wh_staff_rw@example.com", UserRole.WAREHOUSE_STAFF)
     read_resp = await client.get(f"/api/v1/warehouses/{wid}", headers=_auth(wh_token))
     assert read_resp.status_code == 200
 

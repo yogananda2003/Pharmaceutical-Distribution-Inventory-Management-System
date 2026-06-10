@@ -1,4 +1,5 @@
 """Stage 4 — Medicine Management tests."""
+
 from __future__ import annotations
 
 import uuid
@@ -27,9 +28,7 @@ _MEDICINE_PAYLOAD = {
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -110,9 +109,7 @@ async def test_customer_cannot_create_medicine(client: AsyncClient):
 
 
 async def test_sales_rep_cannot_create_medicine(client: AsyncClient):
-    token = await _token_for_role(
-        client, "sales_create@example.com", UserRole.SALES_REPRESENTATIVE
-    )
+    token = await _token_for_role(client, "sales_create@example.com", UserRole.SALES_REPRESENTATIVE)
     resp = await client.post("/api/v1/medicines", json=_MEDICINE_PAYLOAD, headers=_auth(token))
     assert resp.status_code == 403
 
@@ -128,17 +125,13 @@ async def test_list_medicines(client: AsyncClient):
 
 
 async def test_sales_rep_can_list_medicines(client: AsyncClient):
-    token = await _token_for_role(
-        client, "sales_list@example.com", UserRole.SALES_REPRESENTATIVE
-    )
+    token = await _token_for_role(client, "sales_list@example.com", UserRole.SALES_REPRESENTATIVE)
     resp = await client.get("/api/v1/medicines", headers=_auth(token))
     assert resp.status_code == 200
 
 
 async def test_get_medicine_by_id(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_get_id@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_get_id@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/medicines",
         json={**_MEDICINE_PAYLOAD, "code": "GET-BY-ID"},
@@ -157,9 +150,7 @@ async def test_get_medicine_404(client: AsyncClient):
 
 
 async def test_search_medicines(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_search@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_search@example.com", UserRole.INVENTORY_MANAGER)
     await client.post(
         "/api/v1/medicines",
         json={**_MEDICINE_PAYLOAD, "code": "SEARCH-MED", "name": "Ibuprofen 400mg"},
@@ -172,9 +163,7 @@ async def test_search_medicines(client: AsyncClient):
 
 
 async def test_active_only_filter(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_active@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_active@example.com", UserRole.INVENTORY_MANAGER)
     # Create one active and one inactive medicine
     await client.post(
         "/api/v1/medicines",
@@ -186,9 +175,7 @@ async def test_active_only_filter(client: AsyncClient):
         json={**_MEDICINE_PAYLOAD, "code": "INACTIVE-MED", "status": "inactive"},
         headers=_auth(token),
     )
-    resp = await client.get(
-        "/api/v1/medicines?active_only=true", headers=_auth(token)
-    )
+    resp = await client.get("/api/v1/medicines?active_only=true", headers=_auth(token))
     assert resp.status_code == 200
     for m in resp.json()["data"]:
         assert m["status"] == "active"
@@ -198,9 +185,7 @@ async def test_active_only_filter(client: AsyncClient):
 
 
 async def test_update_medicine(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_update@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_update@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/medicines",
         json={**_MEDICINE_PAYLOAD, "code": "UPD-MED"},
@@ -219,9 +204,7 @@ async def test_update_medicine(client: AsyncClient):
 
 
 async def test_update_nonexistent_medicine(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_upd404@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_upd404@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.put(
         f"/api/v1/medicines/{uuid.uuid4()}",
         json={"status": "inactive"},
@@ -234,9 +217,7 @@ async def test_update_nonexistent_medicine(client: AsyncClient):
 
 
 async def test_soft_delete_medicine(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_del@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_del@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/medicines",
         json={**_MEDICINE_PAYLOAD, "code": "DEL-MED"},
@@ -252,9 +233,7 @@ async def test_soft_delete_medicine(client: AsyncClient):
 
 
 async def test_warehouse_staff_can_read_but_not_write(client: AsyncClient):
-    inv_token = await _token_for_role(
-        client, "inv_for_wh@example.com", UserRole.INVENTORY_MANAGER
-    )
+    inv_token = await _token_for_role(client, "inv_for_wh@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/medicines",
         json={**_MEDICINE_PAYLOAD, "code": "WH-READ-MED"},
@@ -262,9 +241,7 @@ async def test_warehouse_staff_can_read_but_not_write(client: AsyncClient):
     )
     mid = create_resp.json()["data"]["id"]
 
-    wh_token = await _token_for_role(
-        client, "wh_staff@example.com", UserRole.WAREHOUSE_STAFF
-    )
+    wh_token = await _token_for_role(client, "wh_staff@example.com", UserRole.WAREHOUSE_STAFF)
     # read — allowed
     read_resp = await client.get(f"/api/v1/medicines/{mid}", headers=_auth(wh_token))
     assert read_resp.status_code == 200

@@ -204,8 +204,7 @@ class InventoryBatchService:
         # Rule 1: cannot reserve more than available
         if data.quantity > batch.quantity_available:
             raise ValueError(
-                f"Cannot allocate {data.quantity} units — "
-                f"only {batch.quantity_available} available"
+                f"Cannot allocate {data.quantity} units — only {batch.quantity_available} available"
             )
         batch.quantity_available -= data.quantity
         batch.quantity_reserved += data.quantity
@@ -233,8 +232,7 @@ class InventoryBatchService:
         # Rule 1: cannot release more than is reserved
         if data.quantity > batch.quantity_reserved:
             raise ValueError(
-                f"Cannot release {data.quantity} units — "
-                f"only {batch.quantity_reserved} reserved"
+                f"Cannot release {data.quantity} units — only {batch.quantity_reserved} reserved"
             )
         batch.quantity_reserved -= data.quantity
         batch.quantity_available += data.quantity
@@ -262,8 +260,7 @@ class InventoryBatchService:
         # Rule 1: cannot ship more than is reserved
         if data.quantity > batch.quantity_reserved:
             raise ValueError(
-                f"Cannot dispatch {data.quantity} units — "
-                f"only {batch.quantity_reserved} reserved"
+                f"Cannot dispatch {data.quantity} units — only {batch.quantity_reserved} reserved"
             )
         batch.quantity_reserved -= data.quantity
         txn = self._record(
@@ -290,22 +287,16 @@ class InventoryBatchService:
             raise ValueError(f"Inventory batch {batch_id} not found")
         return batch
 
-    async def list_batches(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[InventoryBatch]:
+    async def list_batches(self, *, limit: int = 100, offset: int = 0) -> Sequence[InventoryBatch]:
         return await self._batch_repo.list_all(limit=limit, offset=offset)
 
-    async def list_active(
-        self, *, limit: int = 100, offset: int = 0
-    ) -> Sequence[InventoryBatch]:
+    async def list_active(self, *, limit: int = 100, offset: int = 0) -> Sequence[InventoryBatch]:
         return await self._batch_repo.list_active(limit=limit, offset=offset)
 
     async def list_by_medicine(
         self, medicine_id: UUID, *, limit: int = 100, offset: int = 0
     ) -> Sequence[InventoryBatch]:
-        return await self._batch_repo.list_by_medicine(
-            medicine_id, limit=limit, offset=offset
-        )
+        return await self._batch_repo.list_by_medicine(medicine_id, limit=limit, offset=offset)
 
     async def get_transactions(
         self, batch_id: UUID, *, limit: int = 200, offset: int = 0

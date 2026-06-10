@@ -1,4 +1,5 @@
 """Stage 5 — Supplier Management tests."""
+
 from __future__ import annotations
 
 import uuid
@@ -27,9 +28,7 @@ _SUPPLIER_PAYLOAD = {
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -127,25 +126,19 @@ async def test_sales_rep_can_list_suppliers(client: AsyncClient):
 
 
 async def test_warehouse_staff_can_list_suppliers(client: AsyncClient):
-    token = await _token_for_role(
-        client, "wh_sup_list@example.com", UserRole.WAREHOUSE_STAFF
-    )
+    token = await _token_for_role(client, "wh_sup_list@example.com", UserRole.WAREHOUSE_STAFF)
     resp = await client.get("/api/v1/suppliers", headers=_auth(token))
     assert resp.status_code == 200
 
 
 async def test_customer_cannot_list_suppliers(client: AsyncClient):
-    token = await _token_for_role(
-        client, "cust_sup_list@example.com", UserRole.CUSTOMER
-    )
+    token = await _token_for_role(client, "cust_sup_list@example.com", UserRole.CUSTOMER)
     resp = await client.get("/api/v1/suppliers", headers=_auth(token))
     assert resp.status_code == 403
 
 
 async def test_get_supplier_by_id(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_sup_get@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_sup_get@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/suppliers",
         json={**_SUPPLIER_PAYLOAD, "supplier_code": "GET-SUP"},
@@ -167,9 +160,7 @@ async def test_get_supplier_404(client: AsyncClient):
 
 
 async def test_update_supplier(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_sup_update@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_sup_update@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/suppliers",
         json={**_SUPPLIER_PAYLOAD, "supplier_code": "UPD-SUP"},
@@ -188,9 +179,7 @@ async def test_update_supplier(client: AsyncClient):
 
 
 async def test_update_nonexistent_supplier(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_sup_upd404@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_sup_upd404@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.put(
         f"/api/v1/suppliers/{uuid.uuid4()}",
         json={"status": "inactive"},
@@ -224,9 +213,7 @@ async def test_sales_rep_cannot_update_supplier(client: AsyncClient):
 
 
 async def test_soft_delete_supplier(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_sup_del@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_sup_del@example.com", UserRole.INVENTORY_MANAGER)
     create_resp = await client.post(
         "/api/v1/suppliers",
         json={**_SUPPLIER_PAYLOAD, "supplier_code": "DEL-SUP"},
@@ -241,8 +228,6 @@ async def test_soft_delete_supplier(client: AsyncClient):
 
 
 async def test_delete_nonexistent_supplier(client: AsyncClient):
-    token = await _token_for_role(
-        client, "inv_sup_del404@example.com", UserRole.INVENTORY_MANAGER
-    )
+    token = await _token_for_role(client, "inv_sup_del404@example.com", UserRole.INVENTORY_MANAGER)
     resp = await client.delete(f"/api/v1/suppliers/{uuid.uuid4()}", headers=_auth(token))
     assert resp.status_code == 404

@@ -1,4 +1,5 @@
 """Integration tests for the /auth endpoints."""
+
 import pytest
 from httpx import AsyncClient
 
@@ -102,9 +103,7 @@ async def test_refresh_token_rotation(client: AsyncClient):
     )
     old_refresh = login_resp.json()["data"]["refresh_token"]
 
-    refresh_resp = await client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": old_refresh}
-    )
+    refresh_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert refresh_resp.status_code == 200
     new_data = refresh_resp.json()["data"]
     assert new_data["refresh_token"] != old_refresh
@@ -121,9 +120,7 @@ async def test_refresh_token_replay_rejected(client: AsyncClient):
 
     await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     # replay the same token — should be rejected
-    replay_resp = await client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": old_refresh}
-    )
+    replay_resp = await client.post("/api/v1/auth/refresh", json={"refresh_token": old_refresh})
     assert replay_resp.status_code == 401
 
 

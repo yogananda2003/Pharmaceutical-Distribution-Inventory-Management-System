@@ -1,4 +1,5 @@
 """Stage 3 — User Management & RBAC tests."""
+
 from __future__ import annotations
 
 import uuid

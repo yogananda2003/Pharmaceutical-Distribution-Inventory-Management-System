@@ -8,6 +8,7 @@ Concurrency safety: each batch is locked with SELECT ... FOR UPDATE before its
 quantities are modified. Inventory state is re-validated after the lock is
 acquired so that concurrent allocations see consistent data.
 """
+
 from __future__ import annotations
 
 from datetime import date

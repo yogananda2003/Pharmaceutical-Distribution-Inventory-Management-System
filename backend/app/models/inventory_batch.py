@@ -27,7 +27,9 @@ class InventoryBatch(TenantedEntity):
     __tablename__ = "inventory_batches"
     __table_args__ = (
         UniqueConstraint(
-            "medicine_id", "warehouse_id", "batch_number",
+            "medicine_id",
+            "warehouse_id",
+            "batch_number",
             name="uq_batch_medicine_warehouse_number",
         ),
     )

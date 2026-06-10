@@ -12,6 +12,7 @@ Tests verify:
 - Concurrent allocations: only one wins when last unit is contested
 - FEFO release: RELEASE transactions created, quantities restored
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +31,7 @@ pytestmark = pytest.mark.asyncio(loop_scope="session")
 
 _TODAY = date(2026, 6, 10)
 _YESTERDAY = _TODAY - timedelta(days=1)
-_SOON = _TODAY + timedelta(days=30)   # earlier expiry
+_SOON = _TODAY + timedelta(days=30)  # earlier expiry
 _LATER = _TODAY + timedelta(days=90)  # later expiry
 _FAR = date(2028, 12, 31)
 
@@ -38,9 +39,7 @@ _FAR = date(2028, 12, 31)
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -57,9 +56,7 @@ async def _set_role(email: str, role: UserRole) -> None:
 async def _token_for_role(client: AsyncClient, email: str, role: UserRole) -> str:
     await _register_and_login(client, email)
     await _set_role(email, role)
-    resp = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "Pass1234"}
-    )
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": "Pass1234"})
     return resp.json()["data"]["access_token"]
 
 
@@ -157,8 +154,7 @@ async def test_fefo_allocates_from_single_batch(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-S1")
     wid = await _create_warehouse(client, token, "FEFO-W-S1")
     await _create_batch(
-        client, token, mid, wid,
-        batch_number="S1-BATCH", expiry_date=str(_FAR), initial_quantity=50
+        client, token, mid, wid, batch_number="S1-BATCH", expiry_date=str(_FAR), initial_quantity=50
     )
     resp = await _fefo_allocate(client, token, mid, 20)
     assert resp.status_code == 200
@@ -180,12 +176,16 @@ async def test_fefo_earliest_expiry_consumed_first(client: AsyncClient):
     wid = await _create_warehouse(client, token, "FEFO-W-E1")
     # Create LATER batch first (to ensure ordering is by expiry, not creation time)
     later = await _create_batch(
-        client, token, mid, wid,
-        batch_number="E1-LATER", expiry_date=str(_LATER), initial_quantity=20
+        client,
+        token,
+        mid,
+        wid,
+        batch_number="E1-LATER",
+        expiry_date=str(_LATER),
+        initial_quantity=20,
     )
     soon = await _create_batch(
-        client, token, mid, wid,
-        batch_number="E1-SOON", expiry_date=str(_SOON), initial_quantity=20
+        client, token, mid, wid, batch_number="E1-SOON", expiry_date=str(_SOON), initial_quantity=20
     )
 
     resp = await _fefo_allocate(client, token, mid, 15)
@@ -198,9 +198,7 @@ async def test_fefo_earliest_expiry_consumed_first(client: AsyncClient):
     assert allocs[0]["quantity_allocated"] == 15
 
     # The later batch must remain untouched
-    later_resp = await client.get(
-        f"/api/v1/inventory/batches/{later['id']}", headers=_auth(token)
-    )
+    later_resp = await client.get(f"/api/v1/inventory/batches/{later['id']}", headers=_auth(token))
     assert later_resp.json()["data"]["quantity_available"] == 20
     assert later_resp.json()["data"]["quantity_reserved"] == 0
 
@@ -215,12 +213,22 @@ async def test_fefo_partial_fill_spills_to_next_batch(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-SP")
     wid = await _create_warehouse(client, token, "FEFO-W-SP")
     b1 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="SP-BATCH1", expiry_date=str(_SOON), initial_quantity=8
+        client,
+        token,
+        mid,
+        wid,
+        batch_number="SP-BATCH1",
+        expiry_date=str(_SOON),
+        initial_quantity=8,
     )
     b2 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="SP-BATCH2", expiry_date=str(_LATER), initial_quantity=10
+        client,
+        token,
+        mid,
+        wid,
+        batch_number="SP-BATCH2",
+        expiry_date=str(_LATER),
+        initial_quantity=10,
     )
 
     resp = await _fefo_allocate(client, token, mid, 13)
@@ -244,16 +252,13 @@ async def test_fefo_three_batch_spill(client: AsyncClient):
     exp2 = _TODAY + timedelta(days=20)
     exp3 = _TODAY + timedelta(days=30)
     b1 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="SP3-B1", expiry_date=str(exp1), initial_quantity=5
+        client, token, mid, wid, batch_number="SP3-B1", expiry_date=str(exp1), initial_quantity=5
     )
     b2 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="SP3-B2", expiry_date=str(exp2), initial_quantity=5
+        client, token, mid, wid, batch_number="SP3-B2", expiry_date=str(exp2), initial_quantity=5
     )
     b3 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="SP3-B3", expiry_date=str(exp3), initial_quantity=5
+        client, token, mid, wid, batch_number="SP3-B3", expiry_date=str(exp3), initial_quantity=5
     )
 
     resp = await _fefo_allocate(client, token, mid, 14)
@@ -279,13 +284,17 @@ async def test_fefo_skips_expired_batches(client: AsyncClient):
     wid = await _create_warehouse(client, token, "FEFO-W-EX")
     # Expired batch (plenty of stock)
     expired = await _create_batch(
-        client, token, mid, wid,
-        batch_number="EX-EXPIRED", expiry_date=str(_YESTERDAY), initial_quantity=100
+        client,
+        token,
+        mid,
+        wid,
+        batch_number="EX-EXPIRED",
+        expiry_date=str(_YESTERDAY),
+        initial_quantity=100,
     )
     # Valid batch (limited stock)
     valid = await _create_batch(
-        client, token, mid, wid,
-        batch_number="EX-VALID", expiry_date=str(_FAR), initial_quantity=10
+        client, token, mid, wid, batch_number="EX-VALID", expiry_date=str(_FAR), initial_quantity=10
     )
 
     resp = await _fefo_allocate(client, token, mid, 5)
@@ -295,9 +304,7 @@ async def test_fefo_skips_expired_batches(client: AsyncClient):
     assert allocs[0]["batch_id"] == valid["id"]
 
     # Expired batch must be untouched
-    exp_resp = await client.get(
-        f"/api/v1/inventory/batches/{expired['id']}", headers=_auth(token)
-    )
+    exp_resp = await client.get(f"/api/v1/inventory/batches/{expired['id']}", headers=_auth(token))
     assert exp_resp.json()["data"]["quantity_reserved"] == 0
 
 
@@ -308,8 +315,13 @@ async def test_fefo_all_stock_expired_returns_400(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-AE")
     wid = await _create_warehouse(client, token, "FEFO-W-AE")
     await _create_batch(
-        client, token, mid, wid,
-        batch_number="AE-BATCH", expiry_date=str(_YESTERDAY), initial_quantity=50
+        client,
+        token,
+        mid,
+        wid,
+        batch_number="AE-BATCH",
+        expiry_date=str(_YESTERDAY),
+        initial_quantity=50,
     )
 
     resp = await _fefo_allocate(client, token, mid, 1)
@@ -327,8 +339,7 @@ async def test_fefo_insufficient_stock_rejected(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-IN")
     wid = await _create_warehouse(client, token, "FEFO-W-IN")
     batch = await _create_batch(
-        client, token, mid, wid,
-        batch_number="IN-BATCH", expiry_date=str(_FAR), initial_quantity=5
+        client, token, mid, wid, batch_number="IN-BATCH", expiry_date=str(_FAR), initial_quantity=5
     )
 
     resp = await _fefo_allocate(client, token, mid, 10)
@@ -336,9 +347,7 @@ async def test_fefo_insufficient_stock_rejected(client: AsyncClient):
     assert "insufficient" in resp.json()["message"].lower()
 
     # No stock must have been reserved
-    batch_resp = await client.get(
-        f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token)
-    )
+    batch_resp = await client.get(f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token))
     assert batch_resp.json()["data"]["quantity_reserved"] == 0
     assert batch_resp.json()["data"]["quantity_available"] == 5
 
@@ -362,15 +371,12 @@ async def test_fefo_quantities_correct_after_allocation(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-QC")
     wid = await _create_warehouse(client, token, "FEFO-W-QC")
     batch = await _create_batch(
-        client, token, mid, wid,
-        batch_number="QC-BATCH", expiry_date=str(_FAR), initial_quantity=30
+        client, token, mid, wid, batch_number="QC-BATCH", expiry_date=str(_FAR), initial_quantity=30
     )
 
     await _fefo_allocate(client, token, mid, 12)
 
-    resp = await client.get(
-        f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token)
-    )
+    resp = await client.get(f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token))
     data = resp.json()["data"]
     assert data["quantity_available"] == 18
     assert data["quantity_reserved"] == 12
@@ -386,12 +392,10 @@ async def test_fefo_creates_allocation_transactions_per_batch(client: AsyncClien
     mid = await _create_medicine(client, token, "FEFO-M-TP")
     wid = await _create_warehouse(client, token, "FEFO-W-TP")
     b1 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="TP-B1", expiry_date=str(_SOON), initial_quantity=5
+        client, token, mid, wid, batch_number="TP-B1", expiry_date=str(_SOON), initial_quantity=5
     )
     b2 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="TP-B2", expiry_date=str(_LATER), initial_quantity=5
+        client, token, mid, wid, batch_number="TP-B2", expiry_date=str(_LATER), initial_quantity=5
     )
 
     await _fefo_allocate(client, token, mid, 8)
@@ -418,12 +422,22 @@ async def test_fefo_respects_warehouse_filter(client: AsyncClient):
     wid_a = await _create_warehouse(client, token, "FEFO-WH-WF-A")
     wid_b = await _create_warehouse(client, token, "FEFO-WH-WF-B")
     await _create_batch(
-        client, token, mid, wid_a,
-        batch_number="WF-BATCH-A", expiry_date=str(_FAR), initial_quantity=10
+        client,
+        token,
+        mid,
+        wid_a,
+        batch_number="WF-BATCH-A",
+        expiry_date=str(_FAR),
+        initial_quantity=10,
     )
     b_b = await _create_batch(
-        client, token, mid, wid_b,
-        batch_number="WF-BATCH-B", expiry_date=str(_FAR), initial_quantity=10
+        client,
+        token,
+        mid,
+        wid_b,
+        batch_number="WF-BATCH-B",
+        expiry_date=str(_FAR),
+        initial_quantity=10,
     )
 
     # Request filtered to warehouse B only
@@ -443,12 +457,22 @@ async def test_fefo_warehouse_filter_insufficient_fails(client: AsyncClient):
     wid_b = await _create_warehouse(client, token, "FEFO-WH-WI-B")
     # Lots of stock globally, but only 3 in warehouse A
     await _create_batch(
-        client, token, mid, wid_a,
-        batch_number="WI-BATCH-A", expiry_date=str(_FAR), initial_quantity=3
+        client,
+        token,
+        mid,
+        wid_a,
+        batch_number="WI-BATCH-A",
+        expiry_date=str(_FAR),
+        initial_quantity=3,
     )
     await _create_batch(
-        client, token, mid, wid_b,
-        batch_number="WI-BATCH-B", expiry_date=str(_FAR), initial_quantity=100
+        client,
+        token,
+        mid,
+        wid_b,
+        batch_number="WI-BATCH-B",
+        expiry_date=str(_FAR),
+        initial_quantity=100,
     )
 
     resp = await _fefo_allocate(client, token, mid, 10, warehouse_id=wid_a)
@@ -465,8 +489,7 @@ async def test_fefo_release_restores_quantities(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-RL")
     wid = await _create_warehouse(client, token, "FEFO-W-RL")
     batch = await _create_batch(
-        client, token, mid, wid,
-        batch_number="RL-BATCH", expiry_date=str(_FAR), initial_quantity=20
+        client, token, mid, wid, batch_number="RL-BATCH", expiry_date=str(_FAR), initial_quantity=20
     )
 
     alloc_resp = await _fefo_allocate(client, token, mid, 7)
@@ -476,8 +499,7 @@ async def test_fefo_release_restores_quantities(client: AsyncClient):
     # Release the allocation
     release_body = {
         "allocations": [
-            {"batch_id": a["batch_id"], "quantity": a["quantity_allocated"]}
-            for a in allocs
+            {"batch_id": a["batch_id"], "quantity": a["quantity_allocated"]} for a in allocs
         ],
         "reference_number": "CANCEL-001",
     }
@@ -489,9 +511,7 @@ async def test_fefo_release_restores_quantities(client: AsyncClient):
     assert rel_resp.status_code == 204
 
     # Quantities fully restored
-    batch_resp = await client.get(
-        f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token)
-    )
+    batch_resp = await client.get(f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token))
     data = batch_resp.json()["data"]
     assert data["quantity_available"] == 20
     assert data["quantity_reserved"] == 0
@@ -504,12 +524,10 @@ async def test_fefo_release_creates_release_transactions(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-RT")
     wid = await _create_warehouse(client, token, "FEFO-W-RT")
     b1 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="RT-B1", expiry_date=str(_SOON), initial_quantity=5
+        client, token, mid, wid, batch_number="RT-B1", expiry_date=str(_SOON), initial_quantity=5
     )
     b2 = await _create_batch(
-        client, token, mid, wid,
-        batch_number="RT-B2", expiry_date=str(_LATER), initial_quantity=5
+        client, token, mid, wid, batch_number="RT-B2", expiry_date=str(_LATER), initial_quantity=5
     )
 
     alloc_resp = await _fefo_allocate(client, token, mid, 8)
@@ -517,10 +535,11 @@ async def test_fefo_release_creates_release_transactions(client: AsyncClient):
 
     await client.post(
         "/api/v1/inventory/fefo/release",
-        json={"allocations": [
-            {"batch_id": a["batch_id"], "quantity": a["quantity_allocated"]}
-            for a in allocs
-        ]},
+        json={
+            "allocations": [
+                {"batch_id": a["batch_id"], "quantity": a["quantity_allocated"]} for a in allocs
+            ]
+        },
         headers=_auth(token),
     )
 
@@ -541,8 +560,7 @@ async def test_fefo_release_over_reserved_rejected(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-RO")
     wid = await _create_warehouse(client, token, "FEFO-W-RO")
     batch = await _create_batch(
-        client, token, mid, wid,
-        batch_number="RO-BATCH", expiry_date=str(_FAR), initial_quantity=10
+        client, token, mid, wid, batch_number="RO-BATCH", expiry_date=str(_FAR), initial_quantity=10
     )
 
     await _fefo_allocate(client, token, mid, 3)
@@ -565,8 +583,7 @@ async def test_fefo_concurrent_allocation_only_one_wins(client: AsyncClient):
     mid = await _create_medicine(client, token, "FEFO-M-CC")
     wid = await _create_warehouse(client, token, "FEFO-W-CC")
     await _create_batch(
-        client, token, mid, wid,
-        batch_number="CC-BATCH", expiry_date=str(_FAR), initial_quantity=1
+        client, token, mid, wid, batch_number="CC-BATCH", expiry_date=str(_FAR), initial_quantity=1
     )
 
     async def do_allocate() -> int:
@@ -582,9 +599,7 @@ async def test_fefo_concurrent_allocation_only_one_wins(client: AsyncClient):
 
 @freeze_time("2026-06-10")
 async def test_sales_rep_cannot_fefo_allocate(client: AsyncClient):
-    token = await _token_for_role(
-        client, "sales_fefo@example.com", UserRole.SALES_REPRESENTATIVE
-    )
+    token = await _token_for_role(client, "sales_fefo@example.com", UserRole.SALES_REPRESENTATIVE)
     resp = await _fefo_allocate(client, token, str(uuid.uuid4()), 1)
     assert resp.status_code == 403
 

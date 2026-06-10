@@ -7,6 +7,7 @@ Five inventory rules verified explicitly:
 4. Updates occur within DB transactions (verified via atomicity of operations).
 5. Transactions are never deleted (no DELETE endpoint exists).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -35,9 +36,7 @@ _FAR_FUTURE = date(2028, 12, 31)
 # ── shared test fixtures / helpers ────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -54,9 +53,7 @@ async def _set_role(email: str, role: UserRole) -> None:
 async def _token_for_role(client: AsyncClient, email: str, role: UserRole) -> str:
     await _register_and_login(client, email)
     await _set_role(email, role)
-    resp = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "Pass1234"}
-    )
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": "Pass1234"})
     return resp.json()["data"]["access_token"]
 
 
@@ -119,9 +116,7 @@ async def _create_batch(
 
 
 async def _inv_token(client: AsyncClient, suffix: str) -> str:
-    return await _token_for_role(
-        client, f"inv_{suffix}@example.com", UserRole.INVENTORY_MANAGER
-    )
+    return await _token_for_role(client, f"inv_{suffix}@example.com", UserRole.INVENTORY_MANAGER)
 
 
 # ── create batch ──────────────────────────────────────────────────────────────
@@ -224,18 +219,14 @@ async def test_get_batch_by_id(client: AsyncClient):
     mid = await _create_medicine(client, token, "INV-MED-R1")
     wid = await _create_warehouse(client, token, "INV-WH-R1")
     batch = await _create_batch(client, token, mid, wid, batch_number="BATCH-R1")
-    resp = await client.get(
-        f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token)
-    )
+    resp = await client.get(f"/api/v1/inventory/batches/{batch['id']}", headers=_auth(token))
     assert resp.status_code == 200
     assert resp.json()["data"]["id"] == batch["id"]
 
 
 async def test_get_batch_404(client: AsyncClient):
     token = await _inv_token(client, "get_404")
-    resp = await client.get(
-        f"/api/v1/inventory/batches/{uuid.uuid4()}", headers=_auth(token)
-    )
+    resp = await client.get(f"/api/v1/inventory/batches/{uuid.uuid4()}", headers=_auth(token))
     assert resp.status_code == 404
 
 
@@ -354,7 +345,10 @@ async def test_allocate_expired_batch_rejected(client: AsyncClient):
     wid = await _create_warehouse(client, token, "INV-WH-R2A")
     yesterday = str(_YESTERDAY)
     batch = await _create_batch(
-        client, token, mid, wid,
+        client,
+        token,
+        mid,
+        wid,
         batch_number="RULE2-EXP",
         expiry_date=yesterday,
         initial_quantity=100,
@@ -375,7 +369,10 @@ async def test_allocate_batch_expiring_today_allowed(client: AsyncClient):
     mid = await _create_medicine(client, token, "INV-MED-R2B")
     wid = await _create_warehouse(client, token, "INV-WH-R2B")
     batch = await _create_batch(
-        client, token, mid, wid,
+        client,
+        token,
+        mid,
+        wid,
         batch_number="RULE2-TODAY",
         expiry_date=str(_TODAY),
         initial_quantity=10,
@@ -395,7 +392,10 @@ async def test_stock_in_on_expired_batch_allowed(client: AsyncClient):
     mid = await _create_medicine(client, token, "INV-MED-R2C")
     wid = await _create_warehouse(client, token, "INV-WH-R2C")
     batch = await _create_batch(
-        client, token, mid, wid,
+        client,
+        token,
+        mid,
+        wid,
         batch_number="RULE2-SIN",
         expiry_date=str(_YESTERDAY),
     )
@@ -561,9 +561,7 @@ async def test_no_delete_endpoint_for_transactions(client: AsyncClient):
     )
     txn_id = txn_resp.json()["data"][0]["id"]
     # Both DELETE paths should return 404 or 405 (not 204)
-    del_resp = await client.delete(
-        f"/api/v1/inventory/transactions/{txn_id}", headers=_auth(token)
-    )
+    del_resp = await client.delete(f"/api/v1/inventory/transactions/{txn_id}", headers=_auth(token))
     assert del_resp.status_code in (404, 405)
 
 
@@ -771,9 +769,7 @@ async def test_active_only_filter(client: AsyncClient):
     mid = await _create_medicine(client, token, "INV-MED-AF")
     wid = await _create_warehouse(client, token, "INV-WH-AF")
     # Create active batch
-    await _create_batch(
-        client, token, mid, wid, batch_number="ACTIVE-BATCH", initial_quantity=10
-    )
+    await _create_batch(client, token, mid, wid, batch_number="ACTIVE-BATCH", initial_quantity=10)
     # Create exhausted batch
     exhausted = await _create_batch(
         client, token, mid, wid, batch_number="EXHAUST-BATCH", initial_quantity=1
@@ -788,9 +784,7 @@ async def test_active_only_filter(client: AsyncClient):
         json={"quantity": 1},
         headers=_auth(token),
     )
-    resp = await client.get(
-        "/api/v1/inventory/batches?active_only=true", headers=_auth(token)
-    )
+    resp = await client.get("/api/v1/inventory/batches?active_only=true", headers=_auth(token))
     for b in resp.json()["data"]:
         assert b["status"] == "active"
 
@@ -799,9 +793,7 @@ async def test_active_only_filter(client: AsyncClient):
 
 
 async def test_admin_can_list_all_transactions(client: AsyncClient):
-    token = await _token_for_role(
-        client, "admin_txn_list@example.com", UserRole.ADMIN
-    )
+    token = await _token_for_role(client, "admin_txn_list@example.com", UserRole.ADMIN)
     resp = await client.get("/api/v1/inventory/transactions", headers=_auth(token))
     assert resp.status_code == 200
     assert isinstance(resp.json()["data"], list)

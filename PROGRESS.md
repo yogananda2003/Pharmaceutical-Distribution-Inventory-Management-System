@@ -24,6 +24,27 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 8 — Purchase Management
+- Date: 2026-06-10
+- Built:
+  - `app/models/purchase_order.py` — PurchaseOrder (TenantedEntity), PurchaseOrderItem (UUIDPrimaryKeyMixin+TimestampMixin+Base, no soft delete), PurchaseStatus StrEnum (draft/sent/confirmed/partially_received/received/cancelled), PURCHASE_STATUS_TRANSITIONS dict
+  - `app/schemas/purchase_order.py` — PurchaseOrderCreate/Read, PurchaseOrderItemCreate/Read, PurchaseStatusUpdate, GoodsReceiptRequest/Response, GoodsReceiptItemRequest/Result; Decimal/Numeric(12,2) for money fields
+  - `app/repositories/purchase_order.py` — PurchaseOrderRepository (BaseRepository), PurchaseOrderItemRepository (standalone — PurchaseOrderItem not BaseEntity)
+  - `app/services/purchase_order.py` — create (auto/custom PO number, total_amount computed from input items), get/list_all (optional supplier_id/status filters), transition_status (validates PURCHASE_STATUS_TRANSITIONS), cancel, delete (DRAFT/CANCELLED only)
+  - `app/services/purchase_receipt.py` — PurchaseReceiptService.receive: validates PO in CONFIRMED/PARTIALLY_RECEIVED state, find-or-create batch, adds STOCK_IN quantity, creates InventoryTransaction, updates item.quantity_received, re-computes PO status — all in a single session.commit(); bypasses InventoryBatchService to avoid mid-transaction commits
+  - `app/api/v1/purchases.py` — POST /purchases, GET /purchases, GET /purchases/{id}, PATCH /purchases/{id}/status, POST /purchases/{id}/receive, DELETE /purchases/{id}
+  - `app/api/v1/router.py` — registered purchases router
+  - `alembic/versions/a1b2c3d4e5f6_purchase_order_tables.py` — creates purchase_orders + purchase_order_items tables; downgrade drops purchase_status type
+- Test gate:
+  - Lint/format/type: all green (61 source files)
+  - Purchase tests: 23/23 — create (auto-number, custom number, duplicate 409), list/get/404, status transitions (draft→sent→confirmed, invalid → 400, terminal states locked), goods receipt (creates batch + STOCK_IN txn, partially_received, received, second receipt adds qty to same batch), receive non-confirmed → 400, wrong item id → 400, role checks (sales 403 create, sales 200 read, warehouse_staff can receive), unauth 401 (create + list), delete (draft OK then 404, confirmed → 400, unknown 404)
+  - Full suite: 190/190 passing
+- Notes:
+  - PurchaseOrderItem extends only UUIDPrimaryKeyMixin+TimestampMixin+Base — no soft delete (items cascade-delete with parent PO); requires standalone repo, not BaseRepository
+  - total_amount computed from PurchaseOrderCreate.items data (not po.items relationship) to avoid lazy-load MissingGreenlet error after flush in async context
+  - PurchaseReceiptService uses _find_or_create_batch — if same medicine/warehouse/batch_number already exists (split shipments), it reuses the existing batch and adds quantity
+  - PURCHASE_STATUS_TRANSITIONS enforced in service layer; RECEIVED and CANCELLED are terminal states
+
 ## Stage 7 — FEFO Allocation Engine
 - Date: 2026-06-10
 - Built:

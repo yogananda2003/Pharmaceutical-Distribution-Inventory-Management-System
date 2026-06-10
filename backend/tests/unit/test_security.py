@@ -1,4 +1,5 @@
 """Unit tests for security primitives — no DB, no network."""
+
 import time
 import uuid
 
