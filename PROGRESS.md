@@ -24,6 +24,35 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 6 — Inventory: Batches & Transactions
+- Date: 2026-06-10
+- Built:
+  - `app/models/inventory_batch.py` — InventoryBatch (TenantedEntity, BatchStatus: active/quarantine/exhausted/expired, unique constraint on medicine_id+warehouse_id+batch_number, FK to medicines+warehouses)
+  - `app/models/inventory_transaction.py` — InventoryTransaction (immutable ledger: UUIDPrimaryKeyMixin+Base only, no updated_at, no deleted_at, TransactionType: 8 types, FK to inventory_batches+users)
+  - `app/schemas/inventory_batch.py` — BatchCreate (batch_number uppercased, initial_quantity≥0), BatchRead, StockInRequest, AdjustRequest (signed delta), DamageRequest, AllocateRequest, ReleaseRequest, StockOutRequest
+  - `app/schemas/inventory_transaction.py` — TransactionRead
+  - `app/repositories/inventory_batch.py` — get_by_id_not_deleted, get_by_id_for_update (SELECT FOR UPDATE), get_by_batch_number, list_active, list_by_medicine, list_all
+  - `app/repositories/inventory_transaction.py` — create, list_by_batch, list_all
+  - `app/services/inventory_batch.py` — create_batch, stock_in, adjust, damage, allocate (with expiry check + FOR UPDATE), release, stock_out (auto-exhausts batch), get, list_batches, list_active, get_transactions, list_all_transactions
+  - `app/api/v1/inventory.py` — POST /inventory/batches; GET list/get; POST stock-in/adjust/damage/allocate/release/stock-out; GET /transactions (batch-scoped + global); no DELETE endpoint
+  - `alembic/versions/3e51bcf30e06_inventory_batch_transaction_tables.py` — creates both tables; downgrade drops transaction_type and batch_status types
+- Five inventory rules — each has an explicit passing test:
+  1. **No negative quantity** — adjust/damage/allocate/stock-out/release all reject if would go below zero
+  2. **No expired stock sold** — allocate rejects if expiry_date < today; boundary: expiry_date==today is allowed; stock-in on expired batch is allowed (receiving returns)
+  3. **Every movement creates a transaction** — tested for all 6 mutation endpoints
+  4. **DB-transaction atomicity** — concurrent allocation test: two simultaneous requests for the last unit, only one succeeds; `SELECT ... FOR UPDATE` in `get_by_id_for_update`
+  5. **Transactions never deleted** — no DELETE endpoint; DELETE to /inventory/transactions/{id} → 404/405
+- Test gate:
+  - Lint/format/type: all green (53 source files)
+  - API tests: 38/38 new inventory tests pass
+  - Migration round-trip: downgrade -1 → upgrade head ✅
+  - Full suite: 148/148 passing
+- Notes:
+  - `InventoryTransaction` extends only `UUIDPrimaryKeyMixin + Base` (not TenantedEntity/BaseEntity) — no soft delete, no updated_at; this is enforced by design
+  - Expiry boundary: `expiry_date < date.today()` = expired; `expiry_date >= date.today()` = valid
+  - `freezegun` used in expiry boundary tests to pin `date.today()` to a known date
+  - `SELECT ... FOR UPDATE` lock is in `InventoryBatchRepository.get_by_id_for_update`, called by every service mutation
+
 ## Stage 5 — Supplier & Warehouse Management
 - Date: 2026-06-10
 - Built:
