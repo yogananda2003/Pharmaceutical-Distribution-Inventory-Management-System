@@ -24,6 +24,26 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 5 — Supplier & Warehouse Management
+- Date: 2026-06-10
+- Built:
+  - `app/models/supplier.py` — Supplier (TenantedEntity, SupplierStatus StrEnum: active/inactive/blacklisted, supplier_code unique+indexed)
+  - `app/models/warehouse.py` — Warehouse (TenantedEntity, warehouse_code unique+indexed, is_active bool)
+  - `app/schemas/supplier.py` — SupplierCreate (code uppercased), SupplierUpdate, SupplierRead
+  - `app/schemas/warehouse.py` — WarehouseCreate (code uppercased), WarehouseUpdate, WarehouseRead
+  - `app/repositories/supplier.py` — get_by_id_not_deleted, get_by_code, list_active
+  - `app/repositories/warehouse.py` — get_by_id_not_deleted, get_by_code, list_active
+  - `app/services/supplier.py` — create (unique code check), get/update/delete (soft-delete aware), list_suppliers
+  - `app/services/warehouse.py` — create (unique code check), get/update/delete (soft-delete aware), list_warehouses, list_active
+  - `app/api/v1/suppliers.py` — full CRUD; ADMIN+INVENTORY_MANAGER write; ADMIN/INVENTORY_MANAGER/SALES_REP/WAREHOUSE_STAFF read
+  - `app/api/v1/warehouses.py` — full CRUD + active_only filter; same role split as suppliers
+  - `alembic/versions/243cb5a43ba6_supplier_warehouse_tables.py` — creates suppliers+warehouses; downgrade drops tables and supplier_status type
+- Test gate:
+  - Lint/format/type: all green (45 source files, alembic/versions excluded from ruff)
+  - API tests: 38/38 — suppliers (create by inv_manager/admin, code uppercased, dup code 409, customer/sales blocked, unauthed 401, list all roles, get by id, 404, update, update 404, sales can't update, soft delete then 404, delete 404), warehouses (same set + active_only filter, warehouse_staff read/write split)
+  - Migration round-trip: downgrade -1 → upgrade head ✅
+  - Full suite: 110/110 passing
+
 ## Stage 4 — Medicine Management
 - Date: 2026-06-10
 - Built:

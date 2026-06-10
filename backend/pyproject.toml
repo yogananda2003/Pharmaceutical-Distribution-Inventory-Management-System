@@ -50,6 +50,7 @@ asyncio_default_fixture_loop_scope = "session"
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+exclude = ["alembic/versions/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
