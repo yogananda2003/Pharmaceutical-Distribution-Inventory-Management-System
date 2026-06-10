@@ -1,0 +1,46 @@
+backend/app/api/v1/medicines.py
+  7cbf4bb1a8ef6895 1-125
+backend/alembic/versions/c5e7141603fd_auth_tables.py
+  7cbf4bb1a8ef6895 25
+backend/alembic/versions/ddd492b27acf_medicine_table.py
+  7cbf4bb1a8ef6895 21-64
+backend/app/schemas/medicine.py
+  7cbf4bb1a8ef6895 1-64
+backend/app/api/v1/router.py
+  7cbf4bb1a8ef6895 3,9
+backend/app/repositories/medicine.py
+  7cbf4bb1a8ef6895 1-63
+backend/app/models/user.py
+  7cbf4bb1a8ef6895 29-31
+PROGRESS.md
+  7cbf4bb1a8ef6895 27-44
+backend/app/models/medicine.py
+  7cbf4bb1a8ef6895 1-53
+backend/app/models/__init__.py
+  7cbf4bb1a8ef6895 1
+backend/app/services/medicine.py
+  7cbf4bb1a8ef6895 1-96
+backend/tests/api/test_medicines.py
+  7cbf4bb1a8ef6895 1-278
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "6619c924c51890f5688139a192b0b65cbfde3784",
+  "prompts": {
+    "7cbf4bb1a8ef6895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9195f6e1-b8d3-4a8f-821f-9bfac3b6108a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Yogananda.b",
+      "messages": [],
+      "total_additions": 746,
+      "total_deletions": 33,
+      "accepted_lines": 737,
+      "overriden_lines": 0,
+      "messages_url": "https://usegitai.com/cas/34f67f11ce06392063ffc6e64ca9ad0ade40e6f3684a3ac3682e05354a5293f1"
+    }
+  }
+}
