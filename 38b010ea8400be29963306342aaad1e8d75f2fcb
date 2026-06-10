@@ -1,0 +1,44 @@
+backend/app/models/__init__.py
+  7cbf4bb1a8ef6895 4-5
+backend/app/services/purchase_order.py
+  7cbf4bb1a8ef6895 1-133
+backend/app/schemas/purchase_order.py
+  7cbf4bb1a8ef6895 1-124
+backend/alembic/versions/a1b2c3d4e5f6_purchase_order_tables.py
+  7cbf4bb1a8ef6895 1-70
+backend/tests/api/test_purchases.py
+  7cbf4bb1a8ef6895 1-589
+PROGRESS.md
+  7cbf4bb1a8ef6895 27-47
+backend/app/api/v1/purchases.py
+  7cbf4bb1a8ef6895 1-167
+backend/app/api/v1/router.py
+  7cbf4bb1a8ef6895 3,13
+backend/app/repositories/purchase_order.py
+  7cbf4bb1a8ef6895 1-71
+backend/app/services/purchase_receipt.py
+  7cbf4bb1a8ef6895 1-181
+backend/app/models/purchase_order.py
+  7cbf4bb1a8ef6895 1-12,14-106
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "38b010ea8400be29963306342aaad1e8d75f2fcb",
+  "prompts": {
+    "7cbf4bb1a8ef6895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9195f6e1-b8d3-4a8f-821f-9bfac3b6108a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Yogananda.b",
+      "messages": [],
+      "total_additions": 1455,
+      "total_deletions": 16,
+      "accepted_lines": 1463,
+      "overriden_lines": 1,
+      "messages_url": "https://usegitai.com/cas/3c603fad5e6e086eb4dbf74179797215cbd47d874b4cb5b555fff393df63a28f"
+    }
+  }
+}
