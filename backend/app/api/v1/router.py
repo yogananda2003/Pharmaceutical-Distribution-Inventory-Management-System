@@ -6,6 +6,7 @@ from app.api.v1 import (
     health,
     inventory,
     medicines,
+    orders,
     purchases,
     suppliers,
     users,
@@ -22,3 +23,4 @@ api_router.include_router(warehouses.router)
 api_router.include_router(inventory.router)
 api_router.include_router(purchases.router)
 api_router.include_router(customers.router)
+api_router.include_router(orders.router)

@@ -24,6 +24,29 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 10 — Order Management & Lifecycle
+- Date: 2026-06-11
+- Built:
+  - `app/models/customer_order.py` — CustomerOrder (TenantedEntity), OrderItem (UUIDPrimaryKeyMixin+TimestampMixin+Base, no soft delete), OrderItemAllocation (UUIDPrimaryKeyMixin+Base, no timestamps, hard-deleted), OrderStatus StrEnum (10 states), ORDER_STATUS_TRANSITIONS dict, CANCELLABLE_STATUSES set, RESERVED_STATUSES set
+  - `app/schemas/customer_order.py` — OrderItemCreate (qty>0, price/discount/tax ≥0), OrderCreate (items non-empty), OrderRead/OrderItemRead (from_attributes), OrderStatusUpdate
+  - `app/repositories/customer_order.py` — CustomerOrderRepository (BaseRepository), OrderItemRepository (standalone, list_by_order), OrderItemAllocationRepository (standalone, list_by_order, delete_by_order via subquery hard DELETE)
+  - `app/services/customer_order.py` — create (total_amount computed from input items, refresh after commit), get/list_all (customer_id+status filters), transition_status (ORDER_STATUS_TRANSITIONS enforcement), delete (DRAFT only)
+  - `app/services/order_fulfillment.py` — OrderFulfillmentService: approve_order (PLACED→APPROVED: FEFO reserve, ALLOCATION txns, FOR UPDATE per batch, all-or-nothing), dispatch_order (PACKED→DISPATCHED: STOCK_OUT txns, delete allocations), cancel_order (any CANCELLABLE status→CANCELLED: RELEASE txns + delete allocations if was RESERVED)
+  - `app/api/v1/orders.py` — 8 endpoints: POST/GET/GET{id}/PATCH-status/POST-approve/POST-dispatch/POST-cancel/DELETE; ADMIN+INVENTORY_MANAGER approve; ADMIN+INVENTORY_MANAGER+WAREHOUSE_STAFF dispatch
+  - `app/api/v1/router.py` — registered orders router
+  - `alembic/versions/c3d4e5f6a1b2_customer_order_tables.py` — creates customer_orders, order_items, order_item_allocations; downgrade drops order_status type
+- Test gate:
+  - Lint/format/type: all green (75 source files)
+  - Order tests: 26/26 — create (auto-number, totals with discount/tax, duplicate 409, empty items 422), allocation rule (create doesn't touch stock), transitions (draft→placed, invalid → 400, cannot PATCH to approved), approve reserves stock (ALLOCATION txns, available↓ reserved↑), approve insufficient stock 400 (no stock moved), approve requires PLACED, full lifecycle (approve→allocated→picked→packed→dispatch creates STOCK_OUT), dispatch requires PACKED, cancel draft/placed (no stock ops), cancel approved releases stock (RELEASE txns, restores quantities), cannot cancel dispatched, delete draft/cannot delete placed, list/get/404, warehouse_staff cannot create but can dispatch, sales_rep cannot approve (403), unauth 401, concurrent approval (only one wins)
+  - Full suite: 242/242 passing
+- Notes:
+  - Allocation rule: create does NOT touch stock; approve RESERVES (ALLOCATION txns); dispatch REDUCES (STOCK_OUT txns); cancel RELEASES (RELEASE txns)
+  - `ORDER_STATUS_TRANSITIONS` separates "step" transitions (no stock ops, via PATCH /status) from stock-touching transitions (via dedicated /approve, /dispatch, /cancel endpoints)
+  - `line_total = unit_price × quantity − discount + tax_amount`; computed from input data (not ORM relationship) after flush to avoid MissingGreenlet
+  - All-or-nothing approve: pre-check all items (no locks), then allocate per-item per-batch (SELECT FOR UPDATE); ValueError before commit → auto-rollback
+  - `get_by_id_for_update` requires `execution_options={"populate_existing": True}` — without it, SQLAlchemy returns the stale identity-map object (loaded earlier by `list_allocatable_fefo`) instead of the post-lock DB values, causing both concurrent approvals to see `available=10` and both succeed
+  - `OrderItemAllocation` is hard-deleted (not soft-deleted) — operational reservation tracking; audit trail lives in InventoryTransaction
+
 ## Stage 9 — Customer Management
 - Date: 2026-06-10
 - Built:

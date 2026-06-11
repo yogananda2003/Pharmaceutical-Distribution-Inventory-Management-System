@@ -24,14 +24,20 @@ class InventoryBatchRepository:
         return result.scalar_one_or_none()
 
     async def get_by_id_for_update(self, batch_id: UUID) -> InventoryBatch | None:
-        """Acquires a row-level lock — use for all quantity mutations."""
+        """Acquires a row-level lock — use for all quantity mutations.
+
+        populate_existing=True forces SQLAlchemy to refresh the identity-map entry
+        with the post-lock DB values, preventing stale reads when list_allocatable_fefo
+        already loaded this batch in the same session (concurrent-approval scenario).
+        """
         result = await self.session.execute(
             select(InventoryBatch)
             .where(
                 InventoryBatch.id == batch_id,
                 InventoryBatch.deleted_at.is_(None),
             )
-            .with_for_update()
+            .with_for_update(),
+            execution_options={"populate_existing": True},
         )
         return result.scalar_one_or_none()
 

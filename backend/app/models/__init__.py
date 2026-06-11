@@ -1,4 +1,7 @@
 from app.models.customer import Customer as Customer
+from app.models.customer_order import CustomerOrder as CustomerOrder
+from app.models.customer_order import OrderItem as OrderItem
+from app.models.customer_order import OrderItemAllocation as OrderItemAllocation
 from app.models.inventory_batch import InventoryBatch as InventoryBatch
 from app.models.inventory_transaction import InventoryTransaction as InventoryTransaction
 from app.models.medicine import Medicine as Medicine
