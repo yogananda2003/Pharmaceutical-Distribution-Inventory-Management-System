@@ -135,6 +135,23 @@ class InventoryBatchRepository:
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
+    async def list_near_expiry(
+        self, today: date, cutoff: date, *, limit: int = 500
+    ) -> list[InventoryBatch]:
+        """ACTIVE batches where today <= expiry_date <= cutoff (near-expiry window)."""
+        result = await self.session.execute(
+            select(InventoryBatch)
+            .where(
+                InventoryBatch.expiry_date >= today,
+                InventoryBatch.expiry_date <= cutoff,
+                InventoryBatch.status == BatchStatus.ACTIVE,
+                InventoryBatch.deleted_at.is_(None),
+            )
+            .order_by(InventoryBatch.expiry_date)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
     async def add(self, batch: InventoryBatch) -> InventoryBatch:
         self.session.add(batch)
         await self.session.flush()

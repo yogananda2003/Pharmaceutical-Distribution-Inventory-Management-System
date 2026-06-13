@@ -4,6 +4,8 @@ from app.models.customer_order import OrderItem as OrderItem
 from app.models.customer_order import OrderItemAllocation as OrderItemAllocation
 from app.models.inventory_batch import InventoryBatch as InventoryBatch
 from app.models.inventory_transaction import InventoryTransaction as InventoryTransaction
+from app.models.invoice import Invoice as Invoice
+from app.models.invoice import InvoiceLine as InvoiceLine
 from app.models.medicine import Medicine as Medicine
 from app.models.purchase_order import PurchaseOrder as PurchaseOrder
 from app.models.purchase_order import PurchaseOrderItem as PurchaseOrderItem

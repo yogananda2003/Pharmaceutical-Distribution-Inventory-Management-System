@@ -62,6 +62,15 @@ class CustomerOrderRepository(BaseRepository[CustomerOrder]):
         )
         return list(result.scalars().all())
 
+    async def list_by_statuses(self, statuses: list[OrderStatus]) -> list[CustomerOrder]:
+        result = await self.session.execute(
+            select(CustomerOrder).where(
+                CustomerOrder.status.in_(statuses),
+                CustomerOrder.deleted_at.is_(None),
+            )
+        )
+        return list(result.scalars().all())
+
 
 class OrderItemRepository:
     """Standalone — OrderItem does not extend BaseEntity."""

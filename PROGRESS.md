@@ -24,6 +24,122 @@
 
 Source of truth for which stage is complete. Append an entry only after that stage's full test gate is green.
 
+## Stage 12 — Invoice Generation
+- Date: 2026-06-11
+- Built:
+  - `app/models/invoice.py` — Invoice (TenantedEntity), InvoiceLine (UUIDPrimaryKeyMixin+TimestampMixin+Base, no soft delete), InvoiceStatus StrEnum (draft/issued/paid/cancelled/void), INVOICE_STATUS_TRANSITIONS dict
+  - `app/schemas/invoice.py` — GenerateInvoiceRequest, UpdateInvoiceStatusRequest, InvoiceLineRead, InvoiceRead (from_attributes)
+  - `app/repositories/invoice.py` — InvoiceRepository: get_by_id_not_deleted, get_by_order_id, list_all_not_deleted, list_by_customer, list_by_status
+  - `app/services/invoice.py` — InvoiceService: generate_invoice (sequential INV-YYYY-NNNN number via PostgreSQL sequence, computes subtotal/tax/discount/total from order items, creates InvoiceLine per OrderItem), get_invoice, get_by_order, list_invoices, update_status (validates INVOICE_STATUS_TRANSITIONS), delete_invoice (DRAFT only)
+  - `app/api/v1/invoices.py` — POST /invoices (201, MANAGE roles), GET /invoices (VIEW roles, customer_id/status filter), GET /invoices/order/{id}, GET /invoices/{id}, PATCH /invoices/{id}/status (ADMIN roles), DELETE /invoices/{id} 204 (ADMIN roles)
+  - `app/api/v1/router.py` — registered invoices router
+  - `app/models/__init__.py` — added Invoice, InvoiceLine exports
+  - `alembic/versions/d4e5f6a1b2c3_invoice_tables.py` — creates invoices table, invoice_lines table, invoice_number_seq PostgreSQL sequence
+  - `conftest.py` — creates/drops invoice_number_seq around test session (Base.metadata.create_all doesn't create sequences)
+- Test gate:
+  - Lint/format/type: ruff clean, mypy 0 errors in 80 source files
+  - Invoice tests: 27/27 — generate from DISPATCHED/DELIVERED/COMPLETED, number format INV-YYYY-NNNN, sequential numbers (N+1), amounts reconcile (subtotal/tax/discount/total), line items match order items, cannot generate for DRAFT/PLACED/APPROVED (400), duplicate → 409, order not found → 404, GET by id, GET by order, list, list by customer filter, draft→issued, issued→paid, invalid transition (400), status not found (404), delete DRAFT (204), cannot delete ISSUED (400), sales_rep can generate, warehouse_staff view-only, warehouse_staff cannot generate (403), unauthenticated (401)
+  - Full suite: 293/293 passing
+- Notes:
+  - Invoice number uses `SELECT nextval('invoice_number_seq')` — non-transactional PostgreSQL sequence, concurrent-safe, sequence advances even on rollback
+  - Eligible statuses for invoice generation: DISPATCHED, DELIVERED, COMPLETED
+  - Invoice status transitions: draft→issued/cancelled, issued→paid/void; paid/cancelled/void are terminal
+  - Line items copied from OrderItem (unit_price, quantity, discount, tax_amount, line_total) + medicine description
+  - `_to_dict` in API layer adds `order_number` and `customer_name` from selectin-loaded relationships
+  - Re-queries invoice after commit (instead of session.refresh) to ensure all selectin relationships (order, customer, lines) are loaded fresh
+
+## Stage 15 — Frontend Portals
+- Date: 2026-06-12
+- Built:
+  - `frontend/src/lib/auth.ts` — localStorage helpers: getToken/getRole/getUserId/getRefreshToken, setAuth, clearAuth; keys prefixed `pharma_`
+  - `frontend/src/api/client.ts` — Axios instance with Bearer token request interceptor
+  - `frontend/src/api/auth.ts` — loginApi (POST /auth/login), logoutApi (POST /auth/logout)
+  - `frontend/src/api/medicines.ts` — searchMedicines (GET /medicines?q=), listMedicines
+  - `frontend/src/api/orders.ts` — createOrder, listOrders (status/customer_id filter), getOrder, updateOrderStatus, approveOrder, dispatchOrder, cancelOrder; OrderItemRead includes optional medicine_name
+  - `frontend/src/api/customers.ts` — listCustomers
+  - `frontend/src/api/invoices.ts` — listInvoices, getInvoiceByOrder, generateInvoice
+  - `frontend/src/contexts/AuthContext.tsx` — AuthProvider + useAuth hook; AuthContext exported for test injection; login/logout with localStorage sync
+  - `frontend/src/components/AuthGuard.tsx` — redirects unauthenticated to /login; role mismatch redirects to correct portal
+  - `frontend/src/components/OrderStatusBadge.tsx` — Tailwind status-to-colour mapping for all 10 order statuses
+  - `frontend/src/pages/LoginPage.tsx` — React Hook Form + Zod; role-based redirect after login
+  - `frontend/src/pages/customer/ProductSearch.tsx` — medicine search with debounce, cart management (add/qty/price/remove)
+  - `frontend/src/pages/customer/PlaceOrder.tsx` — checkout form: cart summary, customer dropdown, order date, submits createOrder, navigates to order detail
+  - `frontend/src/pages/customer/OrderHistory.tsx` — paginated order list with status badges
+  - `frontend/src/pages/customer/OrderDetail.tsx` — order items table, 8-step progress timeline, invoice section (getInvoiceByOrder)
+  - `frontend/src/pages/sales/SalesDashboard.tsx` — summary cards (total customers, pending orders, dispatched), recent orders table
+  - `frontend/src/pages/sales/CustomerList.tsx` — customer table with credit limit and status badge
+  - `frontend/src/pages/sales/OrderManagement.tsx` — filterable order list with inline Approve/Dispatch/Cancel actions
+  - `frontend/src/App.tsx` — BrowserRouter + AuthProvider + all routes; PortalLayout wrapper; customer portal at /customer/*, sales portal at /sales/* (role-guarded)
+- Test gate:
+  - TypeScript: `tsc --noEmit` 0 errors
+  - Frontend tests: 26/26 — LoginPage (renders fields, email validation, password validation, login called with correct args, API error shown), PlaceOrder (cart items shown, empty cart message, customer validation, successful submit+navigate), OrderHistory (heading, order rows, status badges, new order link, empty state), OrderDetail (order number, status badge, items, invoice number, no-invoice fallback), SalesDashboard (heading, customer count, pending orders, recent orders, nav links)
+  - ESLint: 0 errors, 0 warnings
+- Notes:
+  - `&` in project path breaks `.cmd` shims on Windows — tsc/vitest invoked via `node .\node_modules\<pkg>\bin\...` to bypass the broken batch file
+  - AuthContext exported (not just AuthProvider+useAuth) to allow direct Provider injection in tests; eslint-disable comments added for react-refresh rule on non-component exports
+  - TanStack Query v5 passes `(variables, context)` to mutationFn — test assertions use `toHaveBeenCalledTimes(1)` rather than `toHaveBeenCalledWith` to avoid TanStack internals
+  - Customer portal (/customer/*) accessible to any authenticated user; sales portal (/sales/*) requires role=sales_representative
+
+## Stage 14 — Reporting Module
+- Date: 2026-06-12
+- Built:
+  - `app/schemas/reports.py` — 8 report schemas: MedicineInventorySummary, BatchInventoryRow, StockMovementRow, PurchaseSummaryRow, SalesSummaryRow, CustomerSummaryRow, FulfillmentByStatus, OrderFulfillmentReport; expiry report reuses BatchExpiryInfo from Stage 13
+  - `app/repositories/reports.py` — ReportsRepository with 8 read-only query methods: current_inventory (GROUP BY medicine, SUM quantities), batch_inventory (filtered list), stock_movements (flat JOIN: transaction+batch+medicine+warehouse), purchase_summary (PurchaseOrder ORM with selectin), sales_summary (CustomerOrder OUTER JOIN Invoice), customer_summary (GROUP BY customer with FILTER aggregate for completed_orders), order_fulfillment (GROUP BY status); all use SQLAlchemy 2.0 async
+  - `app/services/reports.py` — ReportsService: orchestrates repository + ORM→schema conversion; expiry_report delegates to ExpiryAlertService.get_expired_batches()+get_near_expiry_batches(90) and combines results
+  - `app/api/v1/reports.py` — 8 GET endpoints at /reports prefix; inventory reports (current/batches/expiry/transactions) accessible to ADMIN, INVENTORY_MANAGER, WAREHOUSE_STAFF; business reports (purchases/sales/customers/orders/fulfillment) accessible to ADMIN, INVENTORY_MANAGER, SALES_REPRESENTATIVE
+  - `app/api/v1/router.py` — registered reports router
+- Test gate:
+  - Lint/format/type: ruff clean, mypy 0 errors across all Stage 14 files
+  - Report tests: 25/25 — current inventory (shows medicine, aggregates across warehouses, warehouse_id filter), batch inventory (medicine filter, expiry_before filter), expiry report (expired+near-expiry with alert_level), stock movements (medicine filter, type filter), purchase report (shows PO with totals, date filter in/out), sales report (dispatched order, invoice shown when generated, customer filter), customer report (all customers, order totals, customer_id filter), order fulfillment (structure/as_of, dispatched order counted, future date range returns 0), role checks (inventory manager all 8 OK, warehouse staff 4 inventory OK/4 business 403, sales rep 4 business OK/4 inventory 403, unauth 401)
+  - Full suite: 340/340 passing
+- Notes:
+  - No new models or migration needed — Stage 14 is purely read-only (SELECT only)
+  - current_inventory uses `func.coalesce(func.sum(...), 0)` + `func.count(distinct(...))` for robust aggregation even when filtered by warehouse_id
+  - stock_movements uses a flat JOIN query (not ORM selectin) to get medicine+warehouse names from a single SQL statement — more efficient for the tabular report use case
+  - customer_summary uses `func.count(id).filter(status == COMPLETED)` — PostgreSQL FILTER clause, cleaner than CASE WHEN
+  - sales_summary outerjoin: `(Invoice.order_id == CustomerOrder.id) & (Invoice.deleted_at.is_(None))` in join condition keeps soft-deleted invoices out without excluding the parent order
+  - `dict[str, Any]` used for aggregation row dicts (mixed types); `list[ORM_model]` used for filtered list queries (selectin relationships already loaded)
+
+## Stage 13 — Expiry Management & Alerts
+- Date: 2026-06-12
+- Built:
+  - `app/repositories/inventory_batch.py` — added `list_near_expiry(today, cutoff)`: ACTIVE batches where today <= expiry_date <= cutoff; complements existing `list_expiring_before(cutoff)` (expiry_date < cutoff, non-EXHAUSTED)
+  - `app/schemas/expiry_alert.py` — BatchExpiryInfo (batch_id, batch_number, medicine/warehouse ids+names, expiry_date, days_to_expiry, quantity_available/reserved, alert_level), ExpiryDashboard (as_of, expired_count, expiring_within_30d/60d/90d)
+  - `app/services/expiry_alert.py` — ExpiryAlertService: get_expiry_dashboard (two queries: expired + near-90d; counts 30d/60d/90d windows in Python), get_expired_batches, get_near_expiry_batches(threshold_days in 30|60|90); alert levels: expired(<0d), critical(0-30d), warning(31-60d), caution(61-90d)
+  - `app/workers/__init__.py` — empty package marker
+  - `app/workers/celery_app.py` — Celery app ("pharma_workers") with Redis broker/backend, includes expiry_alerts task module
+  - `app/workers/expiry_alerts.py` — `scan_expiry_alerts` Celery task (name="expiry_alerts.scan"): uses asyncio.run() to call ExpiryAlertService.get_expiry_dashboard() from a sync Celery task context
+  - `app/api/v1/expiry_alerts.py` — GET /expiry/dashboard, GET /expiry/expired, GET /expiry/near-expiry?days=30|60|90; VIEW roles: ADMIN, INVENTORY_MANAGER, WAREHOUSE_STAFF
+  - `app/api/v1/router.py` — registered expiry_alerts router
+- Test gate:
+  - Lint/format/type: ruff clean, mypy 0 errors in all Stage 13 files
+  - Expiry alert tests: 22/22 — expired batch in list, future batch excluded, today-expiring in near-expiry critical (not expired), 30d boundary inclusive, 31d excluded from 30d window, 60d includes 45d batch (not in 30d), 90d includes 75d batch, EXHAUSTED excluded from near-expiry, expired excluded from near-expiry, alert levels (critical/warning/caution), negative days_to_expiry on expired batches, dashboard counts (>=), dashboard 90d>=60d>=30d, invalid days 400 (45 and 7), WAREHOUSE_STAFF view access, SALES_REP denied 403, unauthenticated 401, Celery task registered
+  - Full suite: 315/315 passing
+- Notes:
+  - Alert level boundary: expiry_date < today → "expired"; expiry_date >= today → near-expiry (critical if 0-30d). A batch expiring exactly today has days_to_expiry=0 → alert_level="critical".
+  - list_expiring_before excludes EXHAUSTED batches (non-ACTIVE still tracked but ignored); list_near_expiry uses ACTIVE status filter
+  - Celery task imports asyncio.run to bridge sync Celery worker context with async SQLAlchemy code; safe for single-use per task invocation
+  - Test for Celery registration must import app.workers.expiry_alerts explicitly (Celery include= only activates when worker process starts)
+
+## Stage 11 — Warehouse Operations
+- Date: 2026-06-11
+- Built:
+  - `app/schemas/warehouse_ops.py` — StockTransferRequest/Response, BatchPickInfo, PickListItemInfo, PickListResponse, PendingOrderSummary
+  - `app/repositories/customer_order.py` — added `list_by_statuses(statuses: list[OrderStatus])` to CustomerOrderRepository
+  - `app/services/warehouse_ops.py` — WarehouseOpsService: transfer_stock (SELECT FOR UPDATE both batches in deterministic order, 2 TRANSFER txns, single commit), get_pending_orders (APPROVED/ALLOCATED/PICKED/PACKED), get_pick_list (assembles pick list from OrderItemAllocations with batch+warehouse details)
+  - `app/api/v1/warehouse_ops.py` — POST /warehouse/transfer, GET /warehouse/pending, GET /warehouse/orders/{id}/pick-list (ADMIN/INVENTORY_MANAGER/WAREHOUSE_STAFF)
+  - `app/api/v1/router.py` — registered warehouse_ops router
+- Test gate:
+  - Lint/format/type: all green (75 source files checked by mypy, ruff clean)
+  - Warehouse ops tests: 24/24 — transfer (reduces source, adds to dest, creates 2 TRANSFER txns, cross-warehouse, same-batch 400, insufficient 400, zero qty 422, source not found 404, dest not found 404, exhausts source, revives exhausted dest, warehouse_staff allowed, sales_rep 403, unauth 401), pending orders (includes APPROVED, excludes DRAFT/PLACED, warehouse_staff 200, sales_rep 403, unauth 401), pick list (approved order with batch+warehouse info, multi-batch FEFO split, draft 400, not found 404, warehouse_staff 200, unauth 401)
+  - Full suite: 266/266 passing
+- Notes:
+  - `TRANSFER` transaction type (defined in Stage 6) is now exercised: one txn on the source batch (transfer out) and one on the destination batch (transfer in), both with the same reference_number
+  - Deadlock prevention: both batches locked in `sorted([src_id, dst_id], key=str)` order — always acquires the lexicographically smaller UUID first
+  - EXHAUSTED destination batch is revived to ACTIVE when stock is transferred in; ACTIVE source batch becomes EXHAUSTED when all available stock is transferred out (only if reserved=0)
+  - Pick list assembled from `OrderItemAllocation.batch` (selectin) + `InventoryBatch.warehouse` (selectin) — all loaded eagerly, no sync lazy access
+  - No new migration: no new models or tables (uses existing inventory_transactions and customer_order tables)
+
 ## Stage 10 — Order Management & Lifecycle
 - Date: 2026-06-11
 - Built:

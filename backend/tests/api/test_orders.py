@@ -15,11 +15,12 @@ Tests verify:
 - Role checks (warehouse_staff read-only for create, can dispatch)
 - Unauthenticated → 401
 """
+
 from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import date, timedelta
+from datetime import date
 
 import pytest
 from freezegun import freeze_time
@@ -40,9 +41,7 @@ _FAR = date(2028, 12, 31)
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 
-async def _register_and_login(
-    client: AsyncClient, email: str, password: str = "Pass1234"
-) -> dict:
+async def _register_and_login(client: AsyncClient, email: str, password: str = "Pass1234") -> dict:
     await client.post("/api/v1/auth/register", json={"email": email, "password": password})
     resp = await client.post("/api/v1/auth/login", json={"email": email, "password": password})
     return resp.json()["data"]
@@ -59,9 +58,7 @@ async def _set_role(email: str, role: UserRole) -> None:
 async def _token_for_role(client: AsyncClient, email: str, role: UserRole) -> str:
     await _register_and_login(client, email)
     await _set_role(email, role)
-    resp = await client.post(
-        "/api/v1/auth/login", json={"email": email, "password": "Pass1234"}
-    )
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": "Pass1234"})
     return resp.json()["data"]["access_token"]
 
 
@@ -82,9 +79,7 @@ async def _sales_token(client: AsyncClient, suffix: str) -> str:
 
 
 async def _wh_token(client: AsyncClient, suffix: str) -> str:
-    return await _token_for_role(
-        client, f"ord_wh_{suffix}@example.com", UserRole.WAREHOUSE_STAFF
-    )
+    return await _token_for_role(client, f"ord_wh_{suffix}@example.com", UserRole.WAREHOUSE_STAFF)
 
 
 async def _create_supplier(client: AsyncClient, token: str, code: str) -> str:
@@ -202,9 +197,7 @@ async def _create_order(
     return await client.post("/api/v1/orders", json=body, headers=_auth(token))
 
 
-async def _transition(
-    client: AsyncClient, token: str, order_id: str, new_status: str
-) -> dict:
+async def _transition(client: AsyncClient, token: str, order_id: str, new_status: str) -> dict:
     return await client.patch(
         f"/api/v1/orders/{order_id}/status",
         json={"status": new_status},
@@ -236,8 +229,14 @@ async def test_create_order_totals_with_discount_and_tax(client: AsyncClient):
     mid = await _create_medicine(client, token, "ORD-MED-TOT1")
     # line_total = 100 * 5 - 50 + 25 = 475
     resp = await _create_order(
-        client, token, cid, mid,
-        qty=5, unit_price="100.00", discount="50.00", tax_amount="25.00",
+        client,
+        token,
+        cid,
+        mid,
+        qty=5,
+        unit_price="100.00",
+        discount="50.00",
+        tax_amount="25.00",
     )
     assert resp.status_code == 201
     data = resp.json()["data"]
@@ -277,9 +276,7 @@ async def test_create_order_does_not_reduce_stock(client: AsyncClient):
     cid = await _create_customer(client, token, "ORD-CUST-AR1")
     mid = await _create_medicine(client, token, "ORD-MED-AR1")
     wid = await _create_warehouse(client, token, "ORD-WH-AR1")
-    bid = await _create_batch_with_stock(
-        client, token, mid, wid, batch_number="AR-B1", qty=50
-    )
+    bid = await _create_batch_with_stock(client, token, mid, wid, batch_number="AR-B1", qty=50)
 
     await _create_order(client, token, cid, mid, qty=30)
 
@@ -341,24 +338,20 @@ async def test_approve_reserves_stock(client: AsyncClient):
     cid = await _create_customer(client, token, "ORD-CUST-APR1")
     mid = await _create_medicine(client, token, "ORD-MED-APR1")
     wid = await _create_warehouse(client, token, "ORD-WH-APR1")
-    bid = await _create_batch_with_stock(
-        client, token, mid, wid, batch_number="APR-B1", qty=100
-    )
+    bid = await _create_batch_with_stock(client, token, mid, wid, batch_number="APR-B1", qty=100)
 
     resp = await _create_order(client, token, cid, mid, qty=30)
     oid = resp.json()["data"]["id"]
     await _transition(client, token, oid, "placed")
 
-    approve_resp = await client.post(
-        f"/api/v1/orders/{oid}/approve", headers=_auth(token)
-    )
+    approve_resp = await client.post(f"/api/v1/orders/{oid}/approve", headers=_auth(token))
     assert approve_resp.status_code == 200, approve_resp.text
     assert approve_resp.json()["data"]["status"] == "approved"
 
     async with get_session_local()() as session:
         batch = await session.get(InventoryBatch, bid)
-        assert batch.quantity_available == 70   # 100 - 30
-        assert batch.quantity_reserved == 30    # reserved
+        assert batch.quantity_available == 70  # 100 - 30
+        assert batch.quantity_reserved == 30  # reserved
 
         txns = await session.execute(
             select(InventoryTransaction).where(
@@ -377,17 +370,13 @@ async def test_approve_insufficient_stock_400(client: AsyncClient):
     cid = await _create_customer(client, token, "ORD-CUST-INS1")
     mid = await _create_medicine(client, token, "ORD-MED-INS1")
     wid = await _create_warehouse(client, token, "ORD-WH-INS1")
-    bid = await _create_batch_with_stock(
-        client, token, mid, wid, batch_number="INS-B1", qty=5
-    )
+    bid = await _create_batch_with_stock(client, token, mid, wid, batch_number="INS-B1", qty=5)
 
     resp = await _create_order(client, token, cid, mid, qty=50)
     oid = resp.json()["data"]["id"]
     await _transition(client, token, oid, "placed")
 
-    approve_resp = await client.post(
-        f"/api/v1/orders/{oid}/approve", headers=_auth(token)
-    )
+    approve_resp = await client.post(f"/api/v1/orders/{oid}/approve", headers=_auth(token))
     assert approve_resp.status_code == 400
 
     # Stock must be unchanged
@@ -418,9 +407,7 @@ async def test_full_lifecycle_dispatch_creates_stock_out(client: AsyncClient):
     cid = await _create_customer(client, token, "ORD-CUST-LC1")
     mid = await _create_medicine(client, token, "ORD-MED-LC1")
     wid = await _create_warehouse(client, token, "ORD-WH-LC1")
-    bid = await _create_batch_with_stock(
-        client, token, mid, wid, batch_number="LC-B1", qty=100
-    )
+    bid = await _create_batch_with_stock(client, token, mid, wid, batch_number="LC-B1", qty=100)
 
     resp = await _create_order(client, token, cid, mid, qty=20)
     oid = resp.json()["data"]["id"]
@@ -431,16 +418,14 @@ async def test_full_lifecycle_dispatch_creates_stock_out(client: AsyncClient):
     await _transition(client, token, oid, "picked")
     await _transition(client, token, oid, "packed")
 
-    dispatch_resp = await client.post(
-        f"/api/v1/orders/{oid}/dispatch", headers=_auth(token)
-    )
+    dispatch_resp = await client.post(f"/api/v1/orders/{oid}/dispatch", headers=_auth(token))
     assert dispatch_resp.status_code == 200, dispatch_resp.text
     assert dispatch_resp.json()["data"]["status"] == "dispatched"
 
     async with get_session_local()() as session:
         batch = await session.get(InventoryBatch, bid)
-        assert batch.quantity_available == 80   # 100 - 20
-        assert batch.quantity_reserved == 0     # cleared
+        assert batch.quantity_available == 80  # 100 - 20
+        assert batch.quantity_reserved == 0  # cleared
 
         txns = await session.execute(
             select(InventoryTransaction).where(
@@ -490,9 +475,7 @@ async def test_cancel_approved_order_releases_stock(client: AsyncClient):
     cid = await _create_customer(client, token, "ORD-CUST-CA1")
     mid = await _create_medicine(client, token, "ORD-MED-CA1")
     wid = await _create_warehouse(client, token, "ORD-WH-CA1")
-    bid = await _create_batch_with_stock(
-        client, token, mid, wid, batch_number="CA-B1", qty=100
-    )
+    bid = await _create_batch_with_stock(client, token, mid, wid, batch_number="CA-B1", qty=100)
 
     resp = await _create_order(client, token, cid, mid, qty=40)
     oid = resp.json()["data"]["id"]
@@ -621,9 +604,7 @@ async def test_warehouse_staff_can_dispatch(client: AsyncClient):
     await _transition(client, inv_token, oid, "allocated")
     await _transition(client, inv_token, oid, "picked")
     await _transition(client, inv_token, oid, "packed")
-    dispatch_resp = await client.post(
-        f"/api/v1/orders/{oid}/dispatch", headers=_auth(wh_token)
-    )
+    dispatch_resp = await client.post(f"/api/v1/orders/{oid}/dispatch", headers=_auth(wh_token))
     assert dispatch_resp.status_code == 200
 
 
@@ -638,9 +619,7 @@ async def test_sales_rep_cannot_approve_order(client: AsyncClient):
     resp = await _create_order(client, sales_token, cid, mid, qty=10)
     oid = resp.json()["data"]["id"]
     await _transition(client, sales_token, oid, "placed")
-    approve_resp = await client.post(
-        f"/api/v1/orders/{oid}/approve", headers=_auth(sales_token)
-    )
+    approve_resp = await client.post(f"/api/v1/orders/{oid}/approve", headers=_auth(sales_token))
     assert approve_resp.status_code == 403
 
 

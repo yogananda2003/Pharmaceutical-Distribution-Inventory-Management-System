@@ -4,6 +4,7 @@ from collections.abc import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
@@ -31,10 +32,15 @@ async def _prepare_database() -> AsyncGenerator[None, None]:
         # Drop first so a previous crashed run can't leave stale rows that
         # cause unique-constraint errors in this session.
         await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP SEQUENCE IF EXISTS invoice_number_seq"))
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            text("CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START WITH 1 INCREMENT BY 1")
+        )
     yield
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+        await conn.execute(text("DROP SEQUENCE IF EXISTS invoice_number_seq"))
     await engine.dispose()
 
 
