@@ -1,0 +1,126 @@
+frontend/src/lib/auth.ts
+  7cbf4bb1a8ef6895 1-34
+backend/app/workers/expiry_alerts.py
+  7cbf4bb1a8ef6895 1-39
+backend/app/repositories/reports.py
+  7cbf4bb1a8ef6895 1-136,138-139,141-275
+backend/app/api/v1/invoices.py
+  7cbf4bb1a8ef6895 1-7,9-137
+backend/app/api/v1/warehouse_ops.py
+  7cbf4bb1a8ef6895 1-84
+frontend/src/pages/customer/OrderDetail.tsx
+  7cbf4bb1a8ef6895 1-168
+frontend/src/api/orders.ts
+  7cbf4bb1a8ef6895 1-75
+PROGRESS.md
+  7cbf4bb1a8ef6895 27-142
+backend/app/models/__init__.py
+  7cbf4bb1a8ef6895 7-8
+backend/app/schemas/expiry_alert.py
+  7cbf4bb1a8ef6895 1-29
+backend/app/schemas/invoice.py
+  7cbf4bb1a8ef6895 1-52
+frontend/src/api/auth.ts
+  7cbf4bb1a8ef6895 1-20
+backend/alembic/versions/d4e5f6a1b2c3_invoice_tables.py
+  7cbf4bb1a8ef6895 1-105
+frontend/src/api/invoices.ts
+  7cbf4bb1a8ef6895 1-43
+frontend/src/pages/sales/SalesDashboard.tsx
+  7cbf4bb1a8ef6895 1-109
+backend/app/models/invoice.py
+  7cbf4bb1a8ef6895 1-109
+frontend/src/api/client.ts
+  7cbf4bb1a8ef6895 2,8-13
+frontend/src/components/OrderStatusBadge.tsx
+  7cbf4bb1a8ef6895 1-21
+frontend/src/pages/LoginPage.test.tsx
+  7cbf4bb1a8ef6895 1-79
+backend/app/api/v1/reports.py
+  7cbf4bb1a8ef6895 1-220
+frontend/src/components/AuthGuard.tsx
+  7cbf4bb1a8ef6895 1-26
+frontend/src/pages/sales/CustomerList.tsx
+  7cbf4bb1a8ef6895 1-61
+backend/app/api/v1/expiry_alerts.py
+  7cbf4bb1a8ef6895 1-52
+backend/app/schemas/warehouse_ops.py
+  7cbf4bb1a8ef6895 1-69
+backend/app/services/expiry_alert.py
+  7cbf4bb1a8ef6895 1-93
+frontend/src/api/medicines.ts
+  7cbf4bb1a8ef6895 1-26
+frontend/src/api/customers.ts
+  7cbf4bb1a8ef6895 1-18
+backend/conftest.py
+  7cbf4bb1a8ef6895 7,35,37-39,43
+frontend/src/pages/customer/OrderHistory.test.tsx
+  7cbf4bb1a8ef6895 1-68
+backend/app/api/v1/router.py
+  7cbf4bb1a8ef6895 6,9,13,16,31-34
+backend/app/services/reports.py
+  7cbf4bb1a8ef6895 1-272
+frontend/src/pages/LoginPage.tsx
+  7cbf4bb1a8ef6895 1-94
+backend/scripts/seed_users.py
+  7cbf4bb1a8ef6895 1-68
+frontend/src/pages/customer/PlaceOrder.test.tsx
+  7cbf4bb1a8ef6895 1-75
+backend/app/repositories/inventory_batch.py
+  7cbf4bb1a8ef6895 138-154
+frontend/src/pages/customer/PlaceOrder.tsx
+  7cbf4bb1a8ef6895 1-169
+frontend/src/pages/customer/OrderHistory.tsx
+  7cbf4bb1a8ef6895 1-69
+frontend/src/pages/customer/OrderDetail.test.tsx
+  7cbf4bb1a8ef6895 1-83
+backend/tests/api/test_expiry_alerts.py
+  7cbf4bb1a8ef6895 1-525
+backend/app/repositories/invoice.py
+  7cbf4bb1a8ef6895 1-56
+frontend/src/pages/customer/ProductSearch.tsx
+  7cbf4bb1a8ef6895 1-136
+frontend/src/contexts/AuthContext.tsx
+  7cbf4bb1a8ef6895 1-65
+backend/app/repositories/customer_order.py
+  7cbf4bb1a8ef6895 65-73
+backend/tests/api/test_reports.py
+  7cbf4bb1a8ef6895 1-688
+frontend/src/App.tsx
+  7cbf4bb1a8ef6895 1-11,14-127
+backend/tests/api/test_warehouse_ops.py
+  7cbf4bb1a8ef6895 1-597
+backend/tests/api/test_invoices.py
+  7cbf4bb1a8ef6895 1-620
+backend/app/services/invoice.py
+  7cbf4bb1a8ef6895 1-176
+backend/app/schemas/reports.py
+  7cbf4bb1a8ef6895 1-134
+frontend/src/pages/sales/SalesDashboard.test.tsx
+  7cbf4bb1a8ef6895 1-64
+backend/app/services/warehouse_ops.py
+  7cbf4bb1a8ef6895 1-226
+frontend/src/pages/sales/OrderManagement.tsx
+  7cbf4bb1a8ef6895 1-132
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.0",
+  "base_commit_sha": "e9ba8ba76896b32de46a27dff64182d9d89c908a",
+  "prompts": {
+    "7cbf4bb1a8ef6895": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "9195f6e1-b8d3-4a8f-821f-9bfac3b6108a",
+        "model": "claude-sonnet-4-6"
+      },
+      "human_author": "Yogananda.b",
+      "messages": [],
+      "total_additions": 6701,
+      "total_deletions": 132,
+      "accepted_lines": 6549,
+      "overriden_lines": 3,
+      "messages_url": "https://usegitai.com/cas/b2b709e06bd18e14c802ff3b3353cacb280b61f47ca8d6eaed4649402783ea8a"
+    }
+  }
+}
