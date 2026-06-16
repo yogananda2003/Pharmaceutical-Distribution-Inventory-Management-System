@@ -10,7 +10,9 @@ export interface OrderItemCreate {
 
 export interface CreateOrderPayload {
   customer_id: string
+  sales_rep_id?: string
   order_date: string
+  notes?: string
   items: OrderItemCreate[]
 }
 
@@ -29,6 +31,8 @@ export interface Order {
   id: string
   order_number: string
   customer_id: string
+  customer_name?: string | null
+  sales_rep_id?: string | null
   order_date: string
   status: string
   total_amount: string
