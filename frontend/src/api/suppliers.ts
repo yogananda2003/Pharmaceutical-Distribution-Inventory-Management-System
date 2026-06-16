@@ -3,16 +3,16 @@ import { apiClient, type SuccessEnvelope } from './client'
 export interface Supplier {
   id: string
   supplier_code: string
-  name: string
+  supplier_name: string   // backend field name — NOT "name"
   email: string | null
   phone: string | null
   address: string | null
-  is_active: boolean
+  status: string
 }
 
 export interface SupplierCreate {
   supplier_code: string
-  name: string
+  supplier_name: string   // must match backend field name
   email?: string
   phone?: string
   address?: string

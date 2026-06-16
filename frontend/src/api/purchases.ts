@@ -35,18 +35,21 @@ export interface POCreate {
   items: POItemCreate[]
 }
 
+// Matches backend GoodsReceiptItemRequest exactly
 export interface ReceiveItem {
-  medicine_id: string
-  quantity_received: number
+  purchase_order_item_id: string  // PO item UUID — NOT medicine_id
   batch_number: string
   expiry_date: string
   warehouse_id: string
-  unit_cost: string
+  quantity: number                // NOT quantity_received
+  manufacturing_date?: string
 }
 
+// Matches backend GoodsReceiptRequest exactly
 export interface ReceivePayload {
-  received_date: string
   items: ReceiveItem[]
+  reference_number?: string
+  remarks?: string
 }
 
 export async function listPurchaseOrders(params?: { supplier_id?: string; status?: string }): Promise<PurchaseOrder[]> {
@@ -69,7 +72,7 @@ export async function updatePOStatus(id: string, status: string): Promise<Purcha
   return res.data.data
 }
 
-export async function receiveGoods(id: string, payload: ReceivePayload): Promise<PurchaseOrder> {
-  const res = await apiClient.post<SuccessEnvelope<PurchaseOrder>>(`/purchases/${id}/receive`, payload)
+export async function receiveGoods(id: string, payload: ReceivePayload): Promise<unknown> {
+  const res = await apiClient.post<SuccessEnvelope<unknown>>(`/purchases/${id}/receive`, payload)
   return res.data.data
 }

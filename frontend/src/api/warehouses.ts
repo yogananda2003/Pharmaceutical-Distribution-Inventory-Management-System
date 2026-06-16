@@ -5,7 +5,7 @@ export interface Warehouse {
   warehouse_code: string
   warehouse_name: string
   address: string | null
-  capacity: number | null
+  contact_details: string | null
   is_active: boolean
 }
 
@@ -13,7 +13,8 @@ export interface WarehouseCreate {
   warehouse_code: string
   warehouse_name: string
   address?: string
-  capacity?: number
+  contact_details?: string  // backend field — NOT "capacity"
+  is_active?: boolean
 }
 
 export async function listWarehouses(): Promise<Warehouse[]> {

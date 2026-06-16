@@ -1,17 +1,19 @@
 import { apiClient, type SuccessEnvelope } from './client'
 
+export const DOSAGE_FORMS = ['tablet','capsule','injection','syrup','ointment','drops','powder','cream','gel','inhaler'] as const
+export type DosageForm = typeof DOSAGE_FORMS[number]
+
 export interface Medicine {
   id: string
   code: string
   name: string
   generic_name: string
   manufacturer: string
-  dosage_form: string
+  dosage: string
+  dosage_form: DosageForm
   strength: string
   unit_type: string
-  reorder_level?: number
-  max_stock_level?: number
-  is_active?: boolean
+  status?: string
 }
 
 export interface MedicineCreate {
@@ -19,11 +21,10 @@ export interface MedicineCreate {
   name: string
   generic_name: string
   manufacturer: string
-  dosage_form: string
+  dosage: string          // e.g. "500mg tablet"
+  dosage_form: DosageForm // enum: tablet | capsule | ...
   strength: string
   unit_type: string
-  reorder_level?: number
-  max_stock_level?: number
 }
 
 export async function searchMedicines(q: string): Promise<Medicine[]> {

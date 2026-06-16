@@ -20,6 +20,7 @@ export async function listBatches(params?: { medicine_id?: string; active_only?:
   return res.data.data
 }
 
+// Backend StockInRequest: { quantity: int, reference_number?: str }
 export async function stockIn(batchId: string, quantity: number, reference?: string): Promise<InventoryBatch> {
   const res = await apiClient.post<SuccessEnvelope<InventoryBatch>>(`/inventory/batches/${batchId}/stock-in`, {
     quantity,
@@ -28,18 +29,20 @@ export async function stockIn(batchId: string, quantity: number, reference?: str
   return res.data.data
 }
 
-export async function adjustStock(batchId: string, quantity: number, reason: string): Promise<InventoryBatch> {
+// Backend AdjustRequest: { quantity_delta: int, reference_number?: str }
+export async function adjustStock(batchId: string, quantityDelta: number, reference?: string): Promise<InventoryBatch> {
   const res = await apiClient.post<SuccessEnvelope<InventoryBatch>>(`/inventory/batches/${batchId}/adjust`, {
-    quantity,
-    reason,
+    quantity_delta: quantityDelta,   // NOT "quantity", NOT "reason"
+    reference_number: reference,
   })
   return res.data.data
 }
 
-export async function damageStock(batchId: string, quantity: number, reason: string): Promise<InventoryBatch> {
+// Backend DamageRequest: { quantity: int, reference_number?: str }
+export async function damageStock(batchId: string, quantity: number, reference?: string): Promise<InventoryBatch> {
   const res = await apiClient.post<SuccessEnvelope<InventoryBatch>>(`/inventory/batches/${batchId}/damage`, {
     quantity,
-    reason,
+    reference_number: reference,   // NOT "reason"
   })
   return res.data.data
 }

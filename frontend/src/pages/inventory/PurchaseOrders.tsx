@@ -18,6 +18,12 @@ const PO_STATUS_STYLES: Record<string, string> = {
   cancelled: 'bg-red-100 text-red-700',
 }
 
+// Display label for each receive item — keyed by purchase_order_item_id
+interface ReceiveItemMeta {
+  label: string     // "Medicine Name (qty pending)"
+  pending: number
+}
+
 export function PurchaseOrders() {
   const qc = useQueryClient()
   const [view, setView] = useState<View>('list')
@@ -30,9 +36,9 @@ export function PurchaseOrders() {
   })
   const [poItems, setPoItems] = useState<POItemCreate[]>([{ medicine_id: '', quantity_ordered: 1, unit_price: '' }])
 
-  // Receive goods state
+  // Receive goods state — uses corrected ReceiveItem interface
   const [receiveItems, setReceiveItems] = useState<ReceiveItem[]>([])
-  const [receiveDate, setReceiveDate] = useState(new Date().toISOString().slice(0, 10))
+  const [receiveMeta, setReceiveMeta] = useState<Record<string, ReceiveItemMeta>>({})
 
   const { data: pos = [], isLoading } = useQuery({ queryKey: ['purchase-orders'], queryFn: () => listPurchaseOrders() })
   const { data: medicines = [] } = useQuery({ queryKey: ['medicines'], queryFn: listMedicines })
@@ -52,26 +58,37 @@ export function PurchaseOrders() {
   })
 
   const receive = useMutation({
-    mutationFn: () => receiveGoods(selectedPO!.id, { received_date: receiveDate, items: receiveItems }),
+    // Backend GoodsReceiptRequest: { items, reference_number?, remarks? } — NO received_date
+    mutationFn: () => receiveGoods(selectedPO!.id, { items: receiveItems }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['purchase-orders'] })
       qc.invalidateQueries({ queryKey: ['inventory-batches'] })
       setView('list'); setSelectedPO(null); setError(null)
     },
-    onError: () => setError('Failed to receive goods.'),
+    onError: () => setError('Failed to receive goods. Ensure all required fields are filled.'),
   })
 
   async function openReceive(po: PurchaseOrder) {
     const full = await getPurchaseOrder(po.id)
     setSelectedPO(full)
-    setReceiveItems(full.items.map(i => ({
-      medicine_id: i.medicine_id,
-      quantity_received: i.quantity_ordered - i.quantity_received,
-      batch_number: '',
-      expiry_date: '',
-      warehouse_id: '',
-      unit_cost: i.unit_price,
-    })))
+
+    const meta: Record<string, ReceiveItemMeta> = {}
+    const items: ReceiveItem[] = full.items.map(i => {
+      const med = medicines.find(m => m.id === i.medicine_id)
+      const pending = Math.max(0, i.quantity_ordered - i.quantity_received)
+      meta[i.id] = { label: `${med?.name ?? i.medicine_id}`, pending }
+      return {
+        // Matches backend GoodsReceiptItemRequest exactly
+        purchase_order_item_id: i.id,   // NOT medicine_id
+        quantity: pending,              // NOT quantity_received
+        batch_number: '',
+        expiry_date: '',
+        warehouse_id: '',
+      }
+    }).filter(i => i.quantity > 0)     // skip fully-received items
+
+    setReceiveItems(items)
+    setReceiveMeta(meta)
     setView('receive')
     setError(null)
   }
@@ -95,7 +112,7 @@ export function PurchaseOrders() {
               <select value={poForm.supplier_id} onChange={e => setPoForm(p => ({ ...p, supplier_id: e.target.value }))}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
                 <option value="">Select supplier…</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_name}</option>)}
               </select>
             </div>
             <div>
@@ -162,8 +179,6 @@ export function PurchaseOrders() {
   }
 
   if (view === 'receive' && selectedPO) {
-    const medicineName = (id: string) => medicines.find(m => m.id === id)?.name ?? id
-
     return (
       <div className="space-y-5">
         <div className="flex items-center gap-3">
@@ -171,62 +186,69 @@ export function PurchaseOrders() {
           <h2 className="text-lg font-semibold text-slate-900">Receive Goods — {selectedPO.po_number}</h2>
         </div>
 
-        <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">Received Date *</label>
-            <input type="date" value={receiveDate} onChange={e => setReceiveDate(e.target.value)}
-              className="w-40 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-          </div>
+        {receiveItems.length === 0 ? (
+          <p className="text-sm text-slate-500 rounded-xl border border-slate-200 bg-white p-5">
+            All items on this PO have already been fully received.
+          </p>
+        ) : (
+          <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4">
+            <div className="space-y-4">
+              {receiveItems.map((item, idx) => {
+                const meta = receiveMeta[item.purchase_order_item_id]
+                return (
+                  <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
+                    <p className="mb-3 text-sm font-medium text-slate-800">
+                      {meta?.label ?? item.purchase_order_item_id}
+                      <span className="ml-2 text-xs text-slate-400">(pending: {meta?.pending ?? item.quantity})</span>
+                    </p>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Qty to Receive *</label>
+                        <input type="number" min={0} value={item.quantity}
+                          onChange={e => updateReceiveItem(idx, 'quantity', Number(e.target.value))}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Batch Number *</label>
+                        <input value={item.batch_number} onChange={e => updateReceiveItem(idx, 'batch_number', e.target.value)}
+                          placeholder="e.g. BATCH-2026-001"
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Expiry Date *</label>
+                        <input type="date" value={item.expiry_date} onChange={e => updateReceiveItem(idx, 'expiry_date', e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Warehouse *</label>
+                        <select value={item.warehouse_id} onChange={e => updateReceiveItem(idx, 'warehouse_id', e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none">
+                          <option value="">Select…</option>
+                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="mb-1 block text-xs text-slate-500">Mfg Date (optional)</label>
+                        <input type="date" value={item.manufacturing_date ?? ''}
+                          onChange={e => updateReceiveItem(idx, 'manufacturing_date', e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
 
-          <div className="space-y-4">
-            {receiveItems.map((item, idx) => (
-              <div key={idx} className="rounded-lg border border-slate-100 bg-slate-50 p-4">
-                <p className="mb-3 text-sm font-medium text-slate-800">{medicineName(item.medicine_id)}</p>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Qty Received *</label>
-                    <input type="number" min={0} value={item.quantity_received}
-                      onChange={e => updateReceiveItem(idx, 'quantity_received', Number(e.target.value))}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Batch Number *</label>
-                    <input value={item.batch_number} onChange={e => updateReceiveItem(idx, 'batch_number', e.target.value)}
-                      placeholder="e.g. BATCH-2026-001"
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Expiry Date *</label>
-                    <input type="date" value={item.expiry_date} onChange={e => updateReceiveItem(idx, 'expiry_date', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Warehouse *</label>
-                    <select value={item.warehouse_id} onChange={e => updateReceiveItem(idx, 'warehouse_id', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none">
-                      <option value="">Select…</option>
-                      {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs text-slate-500">Unit Cost ₹</label>
-                    <input value={item.unit_cost} onChange={e => updateReceiveItem(idx, 'unit_cost', e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none" />
-                  </div>
-                </div>
-              </div>
-            ))}
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            <div className="flex gap-3">
+              <button onClick={() => receive.mutate()} disabled={receive.isPending}
+                className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                {receive.isPending ? 'Receiving…' : 'Confirm Receipt — Add to Stock'}
+              </button>
+              <button onClick={() => setView('list')} className="rounded-lg border border-slate-300 px-5 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
+            </div>
           </div>
-
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <div className="flex gap-3">
-            <button onClick={() => receive.mutate()} disabled={receive.isPending}
-              className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
-              {receive.isPending ? 'Receiving…' : 'Confirm Receipt — Add to Stock'}
-            </button>
-            <button onClick={() => setView('list')} className="rounded-lg border border-slate-300 px-5 py-2 text-sm text-slate-700 hover:bg-slate-50">Cancel</button>
-          </div>
-        </div>
+        )}
       </div>
     )
   }

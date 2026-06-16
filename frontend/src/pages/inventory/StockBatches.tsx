@@ -8,14 +8,20 @@ type Action = 'stock-in' | 'adjust' | 'damage'
 interface ActionState {
   batch: InventoryBatch
   type: Action
-  quantity: string
-  reason: string
+  value: string   // quantity (stock-in / damage) OR quantity_delta (adjust, can be negative)
+  reference: string
 }
 
-const BATCH_STATUS_STYLES: Record<string, string> = {
+const STATUS_STYLES: Record<string, string> = {
   active: 'bg-emerald-100 text-emerald-700',
   exhausted: 'bg-slate-100 text-slate-500',
   expired: 'bg-red-100 text-red-700',
+}
+
+const ACTION_META: Record<Action, { label: string; hint: string; color: string }> = {
+  'stock-in': { label: 'Add Stock',            hint: 'Quantity to add (must be > 0)',              color: 'emerald' },
+  'adjust':   { label: 'Adjust Quantity',       hint: 'Delta: positive to increase, negative to decrease', color: 'amber' },
+  'damage':   { label: 'Write Off Damaged',     hint: 'Quantity to write off (must be > 0)',        color: 'red' },
 }
 
 export function StockBatches() {
@@ -31,65 +37,86 @@ export function StockBatches() {
   const mutate = useMutation({
     mutationFn: async () => {
       if (!action) return
-      const qty = parseInt(action.quantity)
-      if (isNaN(qty) || qty <= 0) throw new Error('Enter a positive quantity')
-      if (action.type === 'stock-in') return stockIn(action.batch.id, qty)
-      if (action.type === 'adjust') return adjustStock(action.batch.id, qty, action.reason)
-      return damageStock(action.batch.id, qty, action.reason)
+      const num = parseInt(action.value)
+      if (isNaN(num)) throw new Error('Enter a valid number')
+      if (action.type === 'stock-in') {
+        if (num <= 0) throw new Error('Quantity must be greater than 0')
+        return stockIn(action.batch.id, num, action.reference || undefined)
+      }
+      if (action.type === 'adjust') {
+        if (num === 0) throw new Error('Delta cannot be zero')
+        // adjustStock sends { quantity_delta: num, reference_number }
+        return adjustStock(action.batch.id, num, action.reference || undefined)
+      }
+      // damage
+      if (num <= 0) throw new Error('Quantity must be greater than 0')
+      return damageStock(action.batch.id, num, action.reference || undefined)
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inventory-batches'] })
       setAction(null)
       setError(null)
     },
-    onError: (e: Error) => setError(e.message || 'Action failed.'),
+    onError: (e: Error) => setError(e.message || 'Action failed. Check the values.'),
   })
 
-  const ACTION_LABEL: Record<Action, string> = {
-    'stock-in': 'Add Stock',
-    'adjust': 'Adjust Quantity',
-    'damage': 'Write Off Damaged',
+  function openAction(batch: InventoryBatch, type: Action) {
+    setAction({ batch, type, value: '', reference: '' })
+    setError(null)
   }
 
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold text-slate-900">Stock / Inventory Batches</h2>
 
-      {/* Action panel */}
       {action && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
-          <h3 className="mb-1 text-sm font-semibold text-amber-900">{ACTION_LABEL[action.type]}</h3>
-          <p className="mb-3 text-xs text-amber-700">
-            Batch: <strong>{action.batch.batch_number}</strong> — {action.batch.medicine_name ?? action.batch.medicine_id}
-            &nbsp;| Available: <strong>{action.batch.quantity_available}</strong>
+        <div className={`rounded-xl border p-5 ${
+          action.type === 'stock-in' ? 'border-emerald-200 bg-emerald-50' :
+          action.type === 'adjust'   ? 'border-amber-200 bg-amber-50' :
+                                       'border-red-200 bg-red-50'
+        }`}>
+          <h3 className="mb-1 text-sm font-semibold text-slate-800">{ACTION_META[action.type].label}</h3>
+          <p className="mb-3 text-xs text-slate-600">
+            Batch: <strong>{action.batch.batch_number}</strong>
+            {' — '}{action.batch.medicine_name ?? action.batch.medicine_id}
+            {'  |  '}Available: <strong>{action.batch.quantity_available}</strong>
+            {'  Reserved: '}<strong>{action.batch.quantity_reserved}</strong>
           </p>
           <div className="flex flex-wrap gap-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Quantity *</label>
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                {action.type === 'adjust' ? 'Delta (e.g. −10 or +50) *' : 'Quantity *'}
+              </label>
               <input
-                type="number" min={1} value={action.quantity}
-                onChange={e => setAction(a => a ? { ...a, quantity: e.target.value } : a)}
-                className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
+                type="number"
+                value={action.value}
+                onChange={e => setAction(a => a ? { ...a, value: e.target.value } : a)}
+                placeholder={ACTION_META[action.type].hint}
+                className="w-32 rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none"
               />
             </div>
-            {action.type !== 'stock-in' && (
-              <div className="flex-1 min-w-[200px]">
-                <label className="mb-1 block text-xs font-medium text-slate-700">Reason *</label>
-                <input
-                  value={action.reason}
-                  onChange={e => setAction(a => a ? { ...a, reason: e.target.value } : a)}
-                  placeholder={action.type === 'adjust' ? 'Physical count correction' : 'Expired / broken'}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-amber-500"
-                />
-              </div>
-            )}
+            <div className="flex-1 min-w-[200px]">
+              <label className="mb-1 block text-xs font-medium text-slate-700">
+                Reference / Reason (optional)
+              </label>
+              <input
+                value={action.reference}
+                onChange={e => setAction(a => a ? { ...a, reference: e.target.value } : a)}
+                placeholder={action.type === 'damage' ? 'e.g. Expired batch' : action.type === 'adjust' ? 'e.g. Physical count 2026-06-16' : 'e.g. GRN-001'}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none"
+              />
+            </div>
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <div className="mt-4 flex gap-3">
             <button
               onClick={() => mutate.mutate()}
               disabled={mutate.isPending}
-              className="rounded-lg bg-amber-600 px-5 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+              className={`rounded-lg px-5 py-2 text-sm font-semibold text-white disabled:opacity-50 ${
+                action.type === 'stock-in' ? 'bg-emerald-600 hover:bg-emerald-700' :
+                action.type === 'adjust'   ? 'bg-amber-600 hover:bg-amber-700' :
+                                             'bg-red-600 hover:bg-red-700'
+              }`}
             >
               {mutate.isPending ? 'Saving…' : 'Confirm'}
             </button>
@@ -104,9 +131,9 @@ export function StockBatches() {
       {isLoading ? (
         <p className="text-sm text-slate-500">Loading…</p>
       ) : batches.length === 0 ? (
-        <p className="text-sm text-slate-500">No batches. Receive goods from a Purchase Order first.</p>
+        <p className="text-sm text-slate-500">No batches found. Receive goods from a Purchase Order to add stock.</p>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-xs uppercase text-slate-500">
               <tr>
@@ -132,17 +159,17 @@ export function StockBatches() {
                   <td className="px-4 py-3 text-right text-indigo-600">{b.quantity_reserved}</td>
                   <td className="px-4 py-3 text-right text-red-600">{b.quantity_damaged}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${BATCH_STATUS_STYLES[b.status] ?? 'bg-slate-100 text-slate-500'}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[b.status] ?? 'bg-slate-100 text-slate-500'}`}>
                       {b.status}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex justify-center gap-2">
-                      <button onClick={() => setAction({ batch: b, type: 'stock-in', quantity: '', reason: '' })}
+                      <button onClick={() => openAction(b, 'stock-in')}
                         className="rounded px-2 py-1 text-xs text-emerald-700 hover:bg-emerald-50">+Stock</button>
-                      <button onClick={() => setAction({ batch: b, type: 'adjust', quantity: '', reason: '' })}
+                      <button onClick={() => openAction(b, 'adjust')}
                         className="rounded px-2 py-1 text-xs text-amber-700 hover:bg-amber-50">Adjust</button>
-                      <button onClick={() => setAction({ batch: b, type: 'damage', quantity: '', reason: '' })}
+                      <button onClick={() => openAction(b, 'damage')}
                         className="rounded px-2 py-1 text-xs text-red-700 hover:bg-red-50">Damage</button>
                     </div>
                   </td>

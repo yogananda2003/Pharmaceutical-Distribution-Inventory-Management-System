@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { createSupplier, listSuppliers, updateSupplier } from '../../api/suppliers'
 import type { Supplier, SupplierCreate } from '../../api/suppliers'
 
-const EMPTY: SupplierCreate = { supplier_code: '', name: '', email: '', phone: '', address: '' }
+const EMPTY: SupplierCreate = { supplier_code: '', supplier_name: '', email: '', phone: '', address: '' }
 
 export function SupplierList() {
   const qc = useQueryClient()
@@ -22,13 +22,21 @@ export function SupplierList() {
 
   function openEdit(s: Supplier) {
     setEditing(s); setAdding(false)
-    setForm({ supplier_code: s.supplier_code, name: s.name, email: s.email ?? '', phone: s.phone ?? '', address: s.address ?? '' })
+    setForm({ supplier_code: s.supplier_code, supplier_name: s.supplier_name, email: s.email ?? '', phone: s.phone ?? '', address: s.address ?? '' })
     setError(null)
   }
 
   function cancel() { setAdding(false); setEditing(null); setForm(EMPTY); setError(null) }
 
   const showForm = adding || editing !== null
+
+  const FIELDS: [keyof SupplierCreate, string][] = [
+    ['supplier_code', 'Code *'],
+    ['supplier_name', 'Supplier Name *'],
+    ['email', 'Email'],
+    ['phone', 'Phone'],
+    ['address', 'Address'],
+  ]
 
   return (
     <div className="space-y-4">
@@ -46,11 +54,14 @@ export function SupplierList() {
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
           <h3 className="mb-4 text-sm font-semibold text-indigo-900">{editing ? 'Edit Supplier' : 'New Supplier'}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            {([ ['supplier_code','Code *'], ['name','Name *'], ['email','Email'], ['phone','Phone'], ['address','Address'] ] as [keyof SupplierCreate, string][]).map(([f, label]) => (
-              <div key={f} className={f === 'address' ? 'sm:col-span-2' : ''}>
+            {FIELDS.map(([field, label]) => (
+              <div key={field} className={field === 'address' ? 'sm:col-span-2' : ''}>
                 <label className="mb-1 block text-xs font-medium text-slate-700">{label}</label>
-                <input value={form[f] ?? ''} onChange={e => setForm(p => ({ ...p, [f]: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                <input
+                  value={form[field] ?? ''}
+                  onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                />
               </div>
             ))}
           </div>
@@ -83,7 +94,7 @@ export function SupplierList() {
               {suppliers.map(s => (
                 <tr key={s.id} className="hover:bg-slate-50">
                   <td className="px-4 py-3 font-mono text-slate-600">{s.supplier_code}</td>
-                  <td className="px-4 py-3 font-medium text-slate-900">{s.name}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">{s.supplier_name}</td>
                   <td className="px-4 py-3 text-slate-500">{s.email ?? '—'}</td>
                   <td className="px-4 py-3 text-slate-500">{s.phone ?? '—'}</td>
                   <td className="px-4 py-3 text-center">

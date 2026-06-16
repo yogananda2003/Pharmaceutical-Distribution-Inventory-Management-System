@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { createWarehouse, listWarehouses, updateWarehouse } from '../../api/warehouses'
 import type { Warehouse, WarehouseCreate } from '../../api/warehouses'
 
-const EMPTY: WarehouseCreate = { warehouse_code: '', warehouse_name: '', address: '', capacity: undefined }
+const EMPTY: WarehouseCreate = { warehouse_code: '', warehouse_name: '', address: '', contact_details: '' }
 
 export function WarehouseList() {
   const qc = useQueryClient()
@@ -22,7 +22,12 @@ export function WarehouseList() {
 
   function openEdit(w: Warehouse) {
     setEditing(w); setAdding(false)
-    setForm({ warehouse_code: w.warehouse_code, warehouse_name: w.warehouse_name, address: w.address ?? '', capacity: w.capacity ?? undefined })
+    setForm({
+      warehouse_code: w.warehouse_code,
+      warehouse_name: w.warehouse_name,
+      address: w.address ?? '',
+      contact_details: w.contact_details ?? '',
+    })
     setError(null)
   }
 
@@ -46,26 +51,21 @@ export function WarehouseList() {
         <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-5">
           <h3 className="mb-4 text-sm font-semibold text-indigo-900">{editing ? 'Edit Warehouse' : 'New Warehouse'}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Code *</label>
-              <input value={form.warehouse_code} onChange={e => setForm(p => ({ ...p, warehouse_code: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Name *</label>
-              <input value={form.warehouse_name} onChange={e => setForm(p => ({ ...p, warehouse_name: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Capacity</label>
-              <input type="number" value={form.capacity ?? ''} onChange={e => setForm(p => ({ ...p, capacity: e.target.value ? Number(e.target.value) : undefined }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-slate-700">Address</label>
-              <input value={form.address ?? ''} onChange={e => setForm(p => ({ ...p, address: e.target.value }))}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-indigo-500" />
-            </div>
+            {([
+              ['warehouse_code', 'Code *'],
+              ['warehouse_name', 'Name *'],
+              ['address', 'Address'],
+              ['contact_details', 'Contact Details'],
+            ] as [keyof WarehouseCreate, string][]).map(([field, label]) => (
+              <div key={field}>
+                <label className="mb-1 block text-xs font-medium text-slate-700">{label}</label>
+                <input
+                  value={form[field] as string ?? ''}
+                  onChange={e => setForm(p => ({ ...p, [field]: e.target.value }))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+            ))}
           </div>
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
           <div className="mt-4 flex gap-3">
@@ -88,7 +88,7 @@ export function WarehouseList() {
                 <th className="px-4 py-3 text-left">Code</th>
                 <th className="px-4 py-3 text-left">Name</th>
                 <th className="px-4 py-3 text-left">Address</th>
-                <th className="px-4 py-3 text-right">Capacity</th>
+                <th className="px-4 py-3 text-left">Contact</th>
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-center">Actions</th>
               </tr>
@@ -99,7 +99,7 @@ export function WarehouseList() {
                   <td className="px-4 py-3 font-mono text-slate-600">{w.warehouse_code}</td>
                   <td className="px-4 py-3 font-medium text-slate-900">{w.warehouse_name}</td>
                   <td className="px-4 py-3 text-slate-500">{w.address ?? '—'}</td>
-                  <td className="px-4 py-3 text-right text-slate-500">{w.capacity?.toLocaleString() ?? '—'}</td>
+                  <td className="px-4 py-3 text-slate-500">{w.contact_details ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${w.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
                       {w.is_active ? 'Active' : 'Inactive'}
